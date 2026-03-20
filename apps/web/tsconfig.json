@@ -17,6 +17,7 @@
     "types": ["vitest/globals"],
     "paths": {
       "@ui/*": ["../../packages/ui/src/*"],
+      "@repo/shared/*": ["../../packages/shared/src/*"],
       "@/*": ["./src/*"]
     }
   },

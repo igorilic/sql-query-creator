@@ -14,11 +14,14 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "@headlessui/react": "^2.0.0",
-    "clsx": "^2.0.0"
+    "clsx": "^2.0.0",
+    "pg": "^8.13.3",
+    "@repo/shared": "workspace:*"
   },
   "devDependencies": {
     "@repo/ui": "workspace:*",
     "@tailwindcss/postcss": "^4.0.0",
+    "@types/pg": "^8.11.11",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.0.0",
