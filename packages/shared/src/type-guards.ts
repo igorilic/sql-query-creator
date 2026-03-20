@@ -6,6 +6,7 @@ export function isPostgresConfig(
   return (
     config !== null &&
     typeof config === 'object' &&
+    !Array.isArray(config) &&
     (config as ConnectionConfig).type === 'postgresql'
   )
 }
@@ -16,6 +17,7 @@ export function isSqliteConfig(
   return (
     config !== null &&
     typeof config === 'object' &&
+    !Array.isArray(config) &&
     (config as ConnectionConfig).type === 'sqlite'
   )
 }
@@ -25,5 +27,11 @@ export function isValidSchema(schema: unknown): schema is DatabaseSchema {
   const s = schema as Record<string, unknown>
   if (s.dialect !== 'postgresql' && s.dialect !== 'sqlite') return false
   if (!Array.isArray(s.tables)) return false
-  return true
+  return s.tables.every(
+    (table) =>
+      table !== null &&
+      typeof table === 'object' &&
+      typeof (table as Record<string, unknown>).name === 'string' &&
+      Array.isArray((table as Record<string, unknown>).columns),
+  )
 }

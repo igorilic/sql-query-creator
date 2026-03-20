@@ -38,6 +38,10 @@ describe('isPostgresConfig', () => {
   it('returns false for an object with an unknown type', () => {
     expect(isPostgresConfig({ type: 'mysql' })).toBe(false)
   })
+
+  it('returns false for an array', () => {
+    expect(isPostgresConfig([{ type: 'postgresql' }])).toBe(false)
+  })
 })
 
 describe('isSqliteConfig', () => {
@@ -53,12 +57,31 @@ describe('isSqliteConfig', () => {
     const config: ConnectionConfig = {
       type: 'postgresql',
       host: 'localhost',
+      port: 5432,
+      database: 'mydb',
+      username: 'user',
     }
     expect(isSqliteConfig(config)).toBe(false)
   })
 
   it('returns false for null', () => {
     expect(isSqliteConfig(null)).toBe(false)
+  })
+
+  it('returns false for undefined', () => {
+    expect(isSqliteConfig(undefined)).toBe(false)
+  })
+
+  it('returns false for an object without type', () => {
+    expect(isSqliteConfig({ filePath: '/tmp/db.sqlite' })).toBe(false)
+  })
+
+  it('returns false for an object with an unknown type', () => {
+    expect(isSqliteConfig({ type: 'mysql' })).toBe(false)
+  })
+
+  it('returns false for an array', () => {
+    expect(isSqliteConfig([{ type: 'sqlite' }])).toBe(false)
   })
 })
 
@@ -113,5 +136,30 @@ describe('isValidSchema', () => {
 
   it('returns false for a non-object', () => {
     expect(isValidSchema('string')).toBe(false)
+  })
+
+  it('returns false when a table element is null', () => {
+    expect(isValidSchema({ dialect: 'postgresql', tables: [null] })).toBe(false)
+  })
+
+  it('returns false when a table element has no name', () => {
+    expect(
+      isValidSchema({ dialect: 'postgresql', tables: [{ columns: [] }] }),
+    ).toBe(false)
+  })
+
+  it('returns false when a table element has no columns array', () => {
+    expect(
+      isValidSchema({ dialect: 'postgresql', tables: [{ name: 'users' }] }),
+    ).toBe(false)
+  })
+
+  it('returns true for a table element with name and empty columns array', () => {
+    expect(
+      isValidSchema({
+        dialect: 'sqlite',
+        tables: [{ name: 'users', columns: [] }],
+      }),
+    ).toBe(true)
   })
 })
