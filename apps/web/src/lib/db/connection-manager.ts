@@ -19,8 +19,13 @@ export class ConnectionManager {
    */
   async connect(config: ConnectionConfig): Promise<ConnectionStatus> {
     if (this.activeClient) {
-      await this.activeClient.disconnect()
-      this.activeClient = null
+      try {
+        await this.activeClient.disconnect()
+      } finally {
+        // Always release the old client reference regardless of whether
+        // the underlying disconnect succeeded, so the manager starts clean.
+        this.activeClient = null
+      }
     }
 
     try {
@@ -48,13 +53,22 @@ export class ConnectionManager {
       return
     }
 
-    await this.activeClient.disconnect()
+    const client = this.activeClient
     this.activeClient = null
     this.status = { connected: false }
+    await client.disconnect()
   }
 
   /** Return a snapshot of the current connection status. */
   getStatus(): ConnectionStatus {
-    return this.status
+    return { ...this.status }
   }
 }
+
+/**
+ * Module-level singleton.
+ *
+ * Import this instance (not the class) in API routes and server-side code so
+ * all callers share the same active connection state.
+ */
+export const connectionManager = new ConnectionManager()

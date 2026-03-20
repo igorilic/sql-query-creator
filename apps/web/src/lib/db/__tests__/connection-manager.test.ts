@@ -185,5 +185,34 @@ describe('ConnectionManager', () => {
     it('resolves without throwing when there is no active connection', async () => {
       await expect(manager.disconnect()).resolves.toBeUndefined()
     })
+
+    it('resets to disconnected state even when the underlying client.disconnect() throws', async () => {
+      vi.mocked(connectPostgres).mockResolvedValueOnce({
+        disconnect: vi.fn().mockRejectedValueOnce(new Error('socket hang up')),
+      })
+
+      await manager.connect(pgConfig)
+
+      await expect(manager.disconnect()).rejects.toThrow('socket hang up')
+
+      // Manager must be in a clean disconnected state despite the error
+      expect(manager.getStatus()).toEqual({ connected: false })
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  // getStatus — snapshot isolation
+  // -------------------------------------------------------------------------
+  describe('getStatus — snapshot isolation', () => {
+    it('returns a snapshot: mutating the returned object does not corrupt internal state', async () => {
+      vi.mocked(connectPostgres).mockResolvedValueOnce({ disconnect: vi.fn() })
+      await manager.connect(pgConfig)
+
+      const snapshot = manager.getStatus() as Record<string, unknown>
+      snapshot.connected = false // caller mutates returned value
+
+      // Internal state must be unaffected
+      expect(manager.getStatus()).toEqual({ connected: true, type: 'postgresql' })
+    })
   })
 })
