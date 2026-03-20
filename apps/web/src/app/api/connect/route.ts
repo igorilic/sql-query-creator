@@ -19,11 +19,16 @@ export async function POST(request: Request): Promise<Response> {
     )
   }
 
-  const status = await connectionManager.connect(body as ConnectionConfig)
+  let status: Awaited<ReturnType<typeof connectionManager.connect>>
+  try {
+    status = await connectionManager.connect(body as ConnectionConfig)
+  } catch {
+    return Response.json({ status: 'error', error: 'An internal error occurred' }, { status: 500 })
+  }
 
   if (status.connected) {
     return Response.json({ status: 'connected', type: status.type })
   }
 
-  return Response.json({ status: 'error', error: status.error })
+  return Response.json({ status: 'error', error: status.error }, { status: 502 })
 }

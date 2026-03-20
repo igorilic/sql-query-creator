@@ -118,8 +118,20 @@ describe('POST /api/connect', () => {
     const response = await POST(makeRequest(validPgConfig))
     const body = await response.json()
 
-    expect(response.status).toBe(200)
+    expect(response.status).toBe(502)
     expect(body).toEqual({ status: 'error', error: 'Connection refused' })
+  })
+
+  it('returns 500 with a generic message when connectionManager.connect throws', async () => {
+    vi.mocked(connectionManager.connect).mockRejectedValueOnce(
+      new Error('previous disconnect failed'),
+    )
+
+    const response = await POST(makeRequest(validPgConfig))
+    const body = await response.json()
+
+    expect(response.status).toBe(500)
+    expect(body).toEqual({ status: 'error', error: 'An internal error occurred' })
   })
 
   it('passes the parsed config object to connectionManager.connect', async () => {
