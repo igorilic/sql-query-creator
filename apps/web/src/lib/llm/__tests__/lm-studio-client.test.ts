@@ -150,7 +150,8 @@ describe('sendChatCompletion', () => {
     expect(caught!.code).toBe('connection_error')
   })
 
-  it('throws LmStudioError with code timeout on AbortError', async () => {
+  it('throws LmStudioError with code connection_error on a generic AbortError (not timer)', async () => {
+    // A raw AbortError that did NOT come from our 30-second timer maps to connection_error
     const abortError = new DOMException('The operation was aborted.', 'AbortError')
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(abortError))
 
@@ -163,7 +164,7 @@ describe('sendChatCompletion', () => {
 
     expect(caught).not.toBeNull()
     expect(caught!.name).toBe('LmStudioError')
-    expect(caught!.code).toBe('timeout')
+    expect(caught!.code).toBe('connection_error')
   })
 
   it('throws LmStudioError with code api_error on non-ok HTTP response', async () => {
@@ -258,7 +259,51 @@ describe('sendChatCompletion', () => {
     }
 
     expect(caught).not.toBeNull()
-    expect(caught!.code).toBe('timeout')
+    expect(caught!.code).toBe('connection_error')
+  })
+
+  it('throws LmStudioError with code stream_error when response body is null', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      body: null,
+    }))
+
+    let caught: LmStudioError | null = null
+    try {
+      await collectChunks(sendChatCompletion(MESSAGES))
+    } catch (err) {
+      caught = err as LmStudioError
+    }
+
+    expect(caught).not.toBeNull()
+    expect(caught!.name).toBe('LmStudioError')
+    expect(caught!.code).toBe('stream_error')
+  })
+
+  it('throws LmStudioError with code stream_error when the stream reader throws', async () => {
+    const encoder = new TextEncoder()
+    const errorStream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"Hi"},"finish_reason":null}]}\n'))
+        controller.error(new TypeError('Network connection lost'))
+      },
+    })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      body: errorStream,
+    }))
+
+    let caught: LmStudioError | null = null
+    try {
+      await collectChunks(sendChatCompletion(MESSAGES))
+    } catch (err) {
+      caught = err as LmStudioError
+    }
+
+    expect(caught).not.toBeNull()
+    expect(caught!.name).toBe('LmStudioError')
+    expect(caught!.code).toBe('stream_error')
   })
 
   it('includes optional model in request body when provided', async () => {
