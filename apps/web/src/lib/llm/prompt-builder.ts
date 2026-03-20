@@ -1,4 +1,4 @@
-import type { DatabaseSchema, ChatMessage } from '@shared/types'
+import type { DatabaseSchema, ChatMessage } from '@repo/shared/types'
 import type { LmStudioMessage } from './types'
 
 const MAX_HISTORY = 20

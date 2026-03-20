@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildSystemPrompt, buildMessages } from '../prompt-builder'
-import type { DatabaseSchema, ChatMessage } from '@shared/types'
+import type { DatabaseSchema, ChatMessage } from '@repo/shared/types'
 
 const pgSchema: DatabaseSchema = {
   dialect: 'postgresql',
@@ -58,7 +58,7 @@ describe('buildSystemPrompt', () => {
 
   it('includes foreign key information', () => {
     const prompt = buildSystemPrompt('postgresql', pgSchema)
-    expect(prompt).toContain('organisations')
+    expect(prompt).toContain('FK -> organisations.id')
   })
 
   it('omits schema section when schema is null', () => {
