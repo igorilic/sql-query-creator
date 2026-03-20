@@ -186,7 +186,7 @@ describe('ConnectionManager', () => {
       await expect(manager.disconnect()).resolves.toBeUndefined()
     })
 
-    it('resets to disconnected state even when the underlying client.disconnect() throws', async () => {
+    it('sets error in status and rethrows when the underlying client.disconnect() throws', async () => {
       vi.mocked(connectPostgres).mockResolvedValueOnce({
         disconnect: vi.fn().mockRejectedValueOnce(new Error('socket hang up')),
       })
@@ -195,8 +195,28 @@ describe('ConnectionManager', () => {
 
       await expect(manager.disconnect()).rejects.toThrow('socket hang up')
 
-      // Manager must be in a clean disconnected state despite the error
-      expect(manager.getStatus()).toEqual({ connected: false })
+      // Manager must expose the error in status so callers can distinguish
+      // a clean disconnect from a failed one.
+      expect(manager.getStatus()).toEqual({ connected: false, error: 'socket hang up' })
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  // connect — stale status when pre-disconnect throws
+  // -------------------------------------------------------------------------
+  describe('connect — pre-disconnect failure', () => {
+    it('resets status to error state when the prior connection cannot be closed', async () => {
+      const failingDisconnect = vi.fn().mockRejectedValueOnce(new Error('connection reset'))
+      vi.mocked(connectPostgres).mockResolvedValueOnce({ disconnect: failingDisconnect })
+
+      await manager.connect(pgConfig)
+
+      // Second connect attempt — first client's disconnect() will throw.
+      // The manager must NOT leave status as "connected: true, type: 'postgresql'".
+      vi.mocked(connectSqlite).mockResolvedValueOnce({ disconnect: vi.fn() })
+      await expect(manager.connect(sqliteConfig)).rejects.toThrow('connection reset')
+
+      expect(manager.getStatus()).toEqual({ connected: false, error: 'connection reset' })
     })
   })
 
@@ -210,6 +230,16 @@ describe('ConnectionManager', () => {
 
       const snapshot = manager.getStatus() as Record<string, unknown>
       snapshot.connected = false // caller mutates returned value
+
+      // Internal state must be unaffected
+      expect(manager.getStatus()).toEqual({ connected: true, type: 'postgresql' })
+    })
+
+    it('connect() returns a snapshot: mutating the result does not corrupt internal state', async () => {
+      vi.mocked(connectPostgres).mockResolvedValueOnce({ disconnect: vi.fn() })
+
+      const result = (await manager.connect(pgConfig)) as Record<string, unknown>
+      result.connected = false // caller mutates returned value
 
       // Internal state must be unaffected
       expect(manager.getStatus()).toEqual({ connected: true, type: 'postgresql' })

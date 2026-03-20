@@ -19,12 +19,18 @@ export class ConnectionManager {
    */
   async connect(config: ConnectionConfig): Promise<ConnectionStatus> {
     if (this.activeClient) {
+      const client = this.activeClient
+      this.activeClient = null
       try {
-        await this.activeClient.disconnect()
-      } finally {
-        // Always release the old client reference regardless of whether
-        // the underlying disconnect succeeded, so the manager starts clean.
-        this.activeClient = null
+        await client.disconnect()
+      } catch (err) {
+        // The old connection failed to close cleanly. Record the error in
+        // status so callers can distinguish success from failure, then
+        // rethrow — we cannot safely open a new connection when we don't
+        // know whether the previous one is actually gone.
+        const message = err instanceof Error ? err.message : String(err)
+        this.status = { connected: false, error: message }
+        throw err
       }
     }
 
@@ -41,7 +47,7 @@ export class ConnectionManager {
       this.status = { connected: false, error: message }
     }
 
-    return this.status
+    return { ...this.status }
   }
 
   /**
@@ -55,8 +61,14 @@ export class ConnectionManager {
 
     const client = this.activeClient
     this.activeClient = null
-    this.status = { connected: false }
-    await client.disconnect()
+    try {
+      await client.disconnect()
+      this.status = { connected: false }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      this.status = { connected: false, error: message }
+      throw err
+    }
   }
 
   /** Return a snapshot of the current connection status. */
