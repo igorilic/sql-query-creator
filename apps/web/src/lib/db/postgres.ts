@@ -16,7 +16,8 @@ export class PostgresConnectionError extends Error {
  * Returns a {@link DatabaseClient} adapter so callers do not depend on `pg`
  * internals — the underlying `pg.Client` is fully encapsulated.
  *
- * @throws {PostgresConnectionError} when the underlying pg client cannot connect.
+ * @throws {PostgresConnectionError} when the underlying pg client cannot connect, or when
+ *   {@link DatabaseClient.disconnect} is called and `client.end()` rejects.
  */
 export async function connectPostgres(config: ConnectionConfig): Promise<DatabaseClient> {
   const client = new Client({
@@ -29,13 +30,19 @@ export async function connectPostgres(config: ConnectionConfig): Promise<Databas
 
   try {
     await client.connect()
-    return {
-      disconnect: async () => {
-        await client.end()
-      },
-    }
   } catch (err) {
     const cause = err instanceof Error ? err : new Error(String(err))
     throw new PostgresConnectionError(cause.message, { cause })
+  }
+
+  return {
+    disconnect: async () => {
+      try {
+        await client.end()
+      } catch (err) {
+        const cause = err instanceof Error ? err : new Error(String(err))
+        throw new PostgresConnectionError(cause.message, { cause })
+      }
+    },
   }
 }

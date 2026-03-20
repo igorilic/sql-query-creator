@@ -56,6 +56,17 @@ describe('connectSqlite', () => {
     })
   })
 
+  it('throws a SqliteConnectionError when filePath is an empty string', async () => {
+    const configEmptyPath: ConnectionConfig = {
+      type: 'sqlite',
+      filePath: '',
+    }
+
+    await expect(connectSqlite(configEmptyPath)).rejects.toMatchObject({
+      name: 'SqliteConnectionError',
+    })
+  })
+
   it('throws a SqliteConnectionError when config.type is not sqlite', async () => {
     const wrongTypeConfig: ConnectionConfig = {
       type: 'postgresql',

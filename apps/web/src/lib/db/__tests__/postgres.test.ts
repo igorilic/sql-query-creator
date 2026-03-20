@@ -115,7 +115,7 @@ describe('DatabaseClient returned by connectPostgres', () => {
     await expect(client.disconnect()).resolves.toBeUndefined()
   })
 
-  it('propagates the rejection when the underlying end() rejects', async () => {
+  it('throws a PostgresConnectionError when the underlying end() rejects', async () => {
     const endError = new Error('connection terminated unexpectedly')
     ;(Client as unknown as ReturnType<typeof vi.fn>).mockImplementationOnce(() => ({
       connect: vi.fn().mockResolvedValue(undefined),
@@ -123,7 +123,11 @@ describe('DatabaseClient returned by connectPostgres', () => {
     }))
 
     const client = await connectPostgres(validPgConfig)
-    await expect(client.disconnect()).rejects.toThrow('connection terminated unexpectedly')
+    await expect(client.disconnect()).rejects.toMatchObject({
+      name: 'PostgresConnectionError',
+      message: expect.stringContaining('connection terminated unexpectedly'),
+      cause: endError,
+    })
   })
 })
 
