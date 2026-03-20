@@ -1,6 +1,6 @@
 import { connectionManager } from '../../../lib/db/connection-manager'
 import { isPostgresConfig, isSqliteConfig } from '@repo/shared/type-guards'
-import type { ConnectionConfig } from '@repo/shared/types'
+import type { ConnectionConfig, ConnectionStatus } from '@repo/shared/types'
 
 export async function POST(request: Request): Promise<Response> {
   // Parse body
@@ -19,7 +19,7 @@ export async function POST(request: Request): Promise<Response> {
     )
   }
 
-  let status: Awaited<ReturnType<typeof connectionManager.connect>>
+  let status: ConnectionStatus
   try {
     status = await connectionManager.connect(body as ConnectionConfig)
   } catch {
