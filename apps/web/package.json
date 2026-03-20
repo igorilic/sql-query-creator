@@ -1,0 +1,28 @@
+{
+  "name": "web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "@headlessui/react": "^2.0.0",
+    "clsx": "^2.0.0"
+  },
+  "devDependencies": {
+    "@repo/ui": "workspace:*",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.0.0",
+    "typescript": "^5.7.3",
+    "vite-tsconfig-paths": "^5.0.0",
+    "vitest": "^2.0.0"
+  }
+}
