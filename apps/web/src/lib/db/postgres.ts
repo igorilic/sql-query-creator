@@ -1,6 +1,7 @@
 import { Client } from 'pg'
 import type { ConnectionConfig } from '@repo/shared/types'
 import type { DatabaseClient } from './types'
+import { introspectPostgres } from './introspect-postgres'
 
 /** Typed error thrown when a PostgreSQL connection attempt fails. */
 export class PostgresConnectionError extends Error {
@@ -44,5 +45,6 @@ export async function connectPostgres(config: ConnectionConfig): Promise<Databas
         throw new PostgresConnectionError(cause.message, { cause })
       }
     },
+    introspect: () => introspectPostgres(client),
   }
 }

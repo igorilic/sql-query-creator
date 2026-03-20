@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3'
 import type { ConnectionConfig } from '@repo/shared/types'
 import type { DatabaseClient } from './types'
+import { introspectSqlite } from './introspect-sqlite'
 
 /** Typed error thrown when a SQLite connection attempt fails or is closed unexpectedly. */
 export class SqliteConnectionError extends Error {
@@ -52,5 +53,6 @@ export async function connectSqlite(config: ConnectionConfig): Promise<DatabaseC
         throw new SqliteConnectionError(cause.message, { cause })
       }
     },
+    introspect: async () => introspectSqlite(db),
   }
 }

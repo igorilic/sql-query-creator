@@ -1,7 +1,7 @@
 import { connectPostgres } from './postgres'
 import { connectSqlite } from './sqlite'
 import type { DatabaseClient } from './types'
-import type { ConnectionConfig, ConnectionStatus } from '@repo/shared/types'
+import type { ConnectionConfig, ConnectionStatus, DatabaseSchema } from '@repo/shared/types'
 
 /**
  * Manages a single active database connection.
@@ -74,6 +74,17 @@ export class ConnectionManager {
   /** Return a snapshot of the current connection status. */
   getStatus(): ConnectionStatus {
     return { ...this.status }
+  }
+
+  /**
+   * Introspect the active connection and return its schema.
+   * @throws if no connection is currently open.
+   */
+  async getSchema(): Promise<DatabaseSchema> {
+    if (!this.activeClient) {
+      throw new Error('Not connected to a database')
+    }
+    return this.activeClient.introspect()
   }
 }
 

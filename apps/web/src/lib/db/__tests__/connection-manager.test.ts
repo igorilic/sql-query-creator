@@ -49,7 +49,7 @@ describe('ConnectionManager', () => {
   // -------------------------------------------------------------------------
   describe('connect — delegation', () => {
     it('delegates to connectPostgres for a PostgreSQL config', async () => {
-      vi.mocked(connectPostgres).mockResolvedValueOnce({ disconnect: vi.fn() })
+      vi.mocked(connectPostgres).mockResolvedValueOnce({ disconnect: vi.fn(), introspect: vi.fn() })
 
       await manager.connect(pgConfig)
 
@@ -58,7 +58,7 @@ describe('ConnectionManager', () => {
     })
 
     it('delegates to connectSqlite for a SQLite config', async () => {
-      vi.mocked(connectSqlite).mockResolvedValueOnce({ disconnect: vi.fn() })
+      vi.mocked(connectSqlite).mockResolvedValueOnce({ disconnect: vi.fn(), introspect: vi.fn() })
 
       await manager.connect(sqliteConfig)
 
@@ -72,7 +72,7 @@ describe('ConnectionManager', () => {
   // -------------------------------------------------------------------------
   describe('connect — returned status', () => {
     it('returns connected status with type postgresql after a successful PG connection', async () => {
-      vi.mocked(connectPostgres).mockResolvedValueOnce({ disconnect: vi.fn() })
+      vi.mocked(connectPostgres).mockResolvedValueOnce({ disconnect: vi.fn(), introspect: vi.fn() })
 
       const status = await manager.connect(pgConfig)
 
@@ -80,7 +80,7 @@ describe('ConnectionManager', () => {
     })
 
     it('returns connected status with type sqlite after a successful SQLite connection', async () => {
-      vi.mocked(connectSqlite).mockResolvedValueOnce({ disconnect: vi.fn() })
+      vi.mocked(connectSqlite).mockResolvedValueOnce({ disconnect: vi.fn(), introspect: vi.fn() })
 
       const status = await manager.connect(sqliteConfig)
 
@@ -114,7 +114,7 @@ describe('ConnectionManager', () => {
   // -------------------------------------------------------------------------
   describe('connect — getStatus side-effects', () => {
     it('getStatus reflects connected state after a successful connection', async () => {
-      vi.mocked(connectPostgres).mockResolvedValueOnce({ disconnect: vi.fn() })
+      vi.mocked(connectPostgres).mockResolvedValueOnce({ disconnect: vi.fn(), introspect: vi.fn() })
 
       await manager.connect(pgConfig)
 
@@ -136,8 +136,8 @@ describe('ConnectionManager', () => {
   describe('connect — single-connection enforcement', () => {
     it('closes the previous connection before opening a new one', async () => {
       const firstDisconnect = vi.fn().mockResolvedValue(undefined)
-      vi.mocked(connectPostgres).mockResolvedValueOnce({ disconnect: firstDisconnect })
-      vi.mocked(connectSqlite).mockResolvedValueOnce({ disconnect: vi.fn() })
+      vi.mocked(connectPostgres).mockResolvedValueOnce({ disconnect: firstDisconnect, introspect: vi.fn() })
+      vi.mocked(connectSqlite).mockResolvedValueOnce({ disconnect: vi.fn(), introspect: vi.fn() })
 
       await manager.connect(pgConfig)
       await manager.connect(sqliteConfig)
@@ -146,8 +146,8 @@ describe('ConnectionManager', () => {
     })
 
     it('opens the second connection even after closing the first', async () => {
-      vi.mocked(connectPostgres).mockResolvedValueOnce({ disconnect: vi.fn().mockResolvedValue(undefined) })
-      vi.mocked(connectSqlite).mockResolvedValueOnce({ disconnect: vi.fn() })
+      vi.mocked(connectPostgres).mockResolvedValueOnce({ disconnect: vi.fn().mockResolvedValue(undefined), introspect: vi.fn() })
+      vi.mocked(connectSqlite).mockResolvedValueOnce({ disconnect: vi.fn(), introspect: vi.fn() })
 
       await manager.connect(pgConfig)
       const status = await manager.connect(sqliteConfig)
@@ -163,7 +163,7 @@ describe('ConnectionManager', () => {
   describe('disconnect', () => {
     it('calls disconnect on the active client', async () => {
       const mockDisconnect = vi.fn().mockResolvedValue(undefined)
-      vi.mocked(connectPostgres).mockResolvedValueOnce({ disconnect: mockDisconnect })
+      vi.mocked(connectPostgres).mockResolvedValueOnce({ disconnect: mockDisconnect, introspect: vi.fn() })
 
       await manager.connect(pgConfig)
       await manager.disconnect()
@@ -174,6 +174,7 @@ describe('ConnectionManager', () => {
     it('updates getStatus to disconnected after disconnect', async () => {
       vi.mocked(connectPostgres).mockResolvedValueOnce({
         disconnect: vi.fn().mockResolvedValue(undefined),
+        introspect: vi.fn(),
       })
 
       await manager.connect(pgConfig)
@@ -189,6 +190,7 @@ describe('ConnectionManager', () => {
     it('sets error in status and rethrows when the underlying client.disconnect() throws', async () => {
       vi.mocked(connectPostgres).mockResolvedValueOnce({
         disconnect: vi.fn().mockRejectedValueOnce(new Error('socket hang up')),
+        introspect: vi.fn(),
       })
 
       await manager.connect(pgConfig)
@@ -207,13 +209,13 @@ describe('ConnectionManager', () => {
   describe('connect — pre-disconnect failure', () => {
     it('resets status to error state when the prior connection cannot be closed', async () => {
       const failingDisconnect = vi.fn().mockRejectedValueOnce(new Error('connection reset'))
-      vi.mocked(connectPostgres).mockResolvedValueOnce({ disconnect: failingDisconnect })
+      vi.mocked(connectPostgres).mockResolvedValueOnce({ disconnect: failingDisconnect, introspect: vi.fn() })
 
       await manager.connect(pgConfig)
 
       // Second connect attempt — first client's disconnect() will throw.
       // The manager must NOT leave status as "connected: true, type: 'postgresql'".
-      vi.mocked(connectSqlite).mockResolvedValueOnce({ disconnect: vi.fn() })
+      vi.mocked(connectSqlite).mockResolvedValueOnce({ disconnect: vi.fn(), introspect: vi.fn() })
       await expect(manager.connect(sqliteConfig)).rejects.toThrow('connection reset')
 
       expect(manager.getStatus()).toEqual({ connected: false, error: 'connection reset' })
@@ -225,7 +227,7 @@ describe('ConnectionManager', () => {
   // -------------------------------------------------------------------------
   describe('getStatus — snapshot isolation', () => {
     it('returns a snapshot: mutating the returned object does not corrupt internal state', async () => {
-      vi.mocked(connectPostgres).mockResolvedValueOnce({ disconnect: vi.fn() })
+      vi.mocked(connectPostgres).mockResolvedValueOnce({ disconnect: vi.fn(), introspect: vi.fn() })
       await manager.connect(pgConfig)
 
       const snapshot = manager.getStatus() as Record<string, unknown>
@@ -236,7 +238,7 @@ describe('ConnectionManager', () => {
     })
 
     it('connect() returns a snapshot: mutating the result does not corrupt internal state', async () => {
-      vi.mocked(connectPostgres).mockResolvedValueOnce({ disconnect: vi.fn() })
+      vi.mocked(connectPostgres).mockResolvedValueOnce({ disconnect: vi.fn(), introspect: vi.fn() })
 
       const result = (await manager.connect(pgConfig)) as Record<string, unknown>
       result.connected = false // caller mutates returned value
