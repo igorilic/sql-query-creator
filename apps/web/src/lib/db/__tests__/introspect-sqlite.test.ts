@@ -192,17 +192,106 @@ describe('introspectSqlite', () => {
     })
   })
 
-  it('excludes internal sqlite_ tables from results', () => {
-    // The sqlite_master query should filter out sqlite_ tables via SQL WHERE clause
-    // This test verifies the query contains the filter
-    const client = createMockClient(() => ({ all: () => [] }))
+  it('excludes internal sqlite_ tables from results (behavioural)', () => {
+    // Mock sqlite_master to return both a real table and an internal sqlite_ table
+    const client = createMockClient((sql) => {
+      if (sql.includes('sqlite_master'))
+        return { all: () => [{ name: 'users' }, { name: 'sqlite_sequence' }] }
+      return { all: () => [] }
+    })
+
+    const schema = introspectSqlite(client)
+
+    const tableNames = schema.tables.map((t) => t.name)
+    expect(tableNames).toContain('users')
+    expect(tableNames).not.toContain('sqlite_sequence')
+  })
+
+  it('uses double-quoted identifiers in PRAGMA queries to prevent injection', () => {
+    const client = createMockClient((sql) => {
+      if (sql.includes('sqlite_master')) return { all: () => [{ name: 'users' }] }
+      return { all: () => [] }
+    })
 
     introspectSqlite(client)
 
     const calls = (client.prepare as ReturnType<typeof vi.fn>).mock.calls.map(
       (c: unknown[]) => c[0] as string,
     )
-    const masterQuery = calls.find((sql) => sql.includes('sqlite_master'))
-    expect(masterQuery).toMatch(/sqlite_%/)
+    const tableInfoCall = calls.find((sql) => sql.includes('table_info'))
+    const fkListCall = calls.find((sql) => sql.includes('foreign_key_list'))
+
+    expect(tableInfoCall).toMatch(/PRAGMA table_info\("users"\)/)
+    expect(fkListCall).toMatch(/PRAGMA foreign_key_list\("users"\)/)
+  })
+
+  it('safely handles table names containing double-quote characters', () => {
+    const client = createMockClient((sql) => {
+      if (sql.includes('sqlite_master')) return { all: () => [{ name: 'my"table' }] }
+      if (sql.includes('table_info'))
+        return {
+          all: () => [{ cid: 0, name: 'id', type: 'INTEGER', notnull: 1, dflt_value: null, pk: 1 }],
+        }
+      return { all: () => [] }
+    })
+
+    // Should not throw
+    const schema = introspectSqlite(client)
+    expect(schema.tables).toHaveLength(1)
+    expect(schema.tables[0].name).toBe('my"table')
+  })
+
+  it('marks all columns in a composite primary key with isPrimaryKey: true', () => {
+    const tableInfoRows: MockRow[] = [
+      { cid: 0, name: 'user_id', type: 'INTEGER', notnull: 1, dflt_value: null, pk: 1 },
+      { cid: 1, name: 'role_id', type: 'INTEGER', notnull: 1, dflt_value: null, pk: 2 },
+      { cid: 2, name: 'granted_at', type: 'TEXT', notnull: 1, dflt_value: null, pk: 0 },
+    ]
+
+    const client = createMockClient((sql) => {
+      if (sql.includes('sqlite_master')) return { all: () => [{ name: 'user_roles' }] }
+      if (sql.includes('table_info')) return { all: () => tableInfoRows }
+      return { all: () => [] }
+    })
+
+    const schema = introspectSqlite(client)
+
+    const [userIdCol, roleIdCol, grantedAtCol] = schema.tables[0].columns
+    expect(userIdCol.isPrimaryKey).toBe(true)
+    expect(roleIdCol.isPrimaryKey).toBe(true)
+    expect(grantedAtCol.isPrimaryKey).toBe(false)
+  })
+
+  it('normalises typeless columns (empty type affinity) to TEXT', () => {
+    const tableInfoRows: MockRow[] = [
+      { cid: 0, name: 'id', type: 'INTEGER', notnull: 1, dflt_value: null, pk: 1 },
+      { cid: 1, name: 'data', type: '', notnull: 0, dflt_value: null, pk: 0 },
+    ]
+
+    const client = createMockClient((sql) => {
+      if (sql.includes('sqlite_master')) return { all: () => [{ name: 'items' }] }
+      if (sql.includes('table_info')) return { all: () => tableInfoRows }
+      return { all: () => [] }
+    })
+
+    const schema = introspectSqlite(client)
+
+    const dataCol = schema.tables[0].columns.find((c) => c.name === 'data')
+    expect(dataCol?.dataType).toBe('TEXT')
+  })
+
+  it('returns dialect: sqlite on the non-empty code path', () => {
+    const client = createMockClient((sql) => {
+      if (sql.includes('sqlite_master')) return { all: () => [{ name: 'users' }] }
+      if (sql.includes('table_info'))
+        return {
+          all: () => [{ cid: 0, name: 'id', type: 'INTEGER', notnull: 1, dflt_value: null, pk: 1 }],
+        }
+      return { all: () => [] }
+    })
+
+    const schema = introspectSqlite(client)
+
+    expect(schema.dialect).toBe('sqlite')
   })
 })

@@ -18,6 +18,7 @@ export function introspectSqlite(client: SqliteQueryable): DatabaseSchema {
       `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name`,
     )
     .all()
+    .filter((row) => !(row.name as string).startsWith('sqlite_'))
 
   if (tableRows.length === 0) {
     return { tables: [], dialect: 'sqlite' }
@@ -25,10 +26,11 @@ export function introspectSqlite(client: SqliteQueryable): DatabaseSchema {
 
   const tables: TableInfo[] = tableRows.map((tableRow) => {
     const tableName = tableRow.name as string
+    const safeName = tableName.replace(/"/g, '""')
 
-    const columnRows = client.prepare(`PRAGMA table_info(${tableName})`).all()
+    const columnRows = client.prepare(`PRAGMA table_info("${safeName}")`).all()
 
-    const fkRows = client.prepare(`PRAGMA foreign_key_list(${tableName})`).all()
+    const fkRows = client.prepare(`PRAGMA foreign_key_list("${safeName}")`).all()
 
     const fkMap = new Map<string, { table: string; column: string }>()
     for (const fk of fkRows) {
@@ -40,9 +42,10 @@ export function introspectSqlite(client: SqliteQueryable): DatabaseSchema {
 
     const columns: ColumnInfo[] = columnRows.map((row) => {
       const colName = row.name as string
+      const rawType = (row.type as string) || 'TEXT'
       const col: ColumnInfo = {
         name: colName,
-        dataType: row.type as string,
+        dataType: rawType,
         nullable: (row.notnull as number) === 0,
         isPrimaryKey: (row.pk as number) > 0,
       }
