@@ -14,6 +14,9 @@ import Database from 'better-sqlite3'
 import { connectSqlite, SqliteConnectionError } from '../sqlite'
 import type { ConnectionConfig } from '@repo/shared/types'
 
+// Typed helper to access the mocked Database constructor
+const MockDatabase = Database as unknown as ReturnType<typeof vi.fn>
+
 const validSqliteConfig: ConnectionConfig = {
   type: 'sqlite',
   filePath: '/tmp/test.db',
@@ -27,13 +30,13 @@ describe('connectSqlite', () => {
   it('returns a DatabaseClient with a disconnect method on success', async () => {
     const client = await connectSqlite(validSqliteConfig)
 
-    expect(Database).toHaveBeenCalledWith('/tmp/test.db')
+    expect(MockDatabase).toHaveBeenCalledWith('/tmp/test.db')
     expect(client).toBeDefined()
     expect(typeof client.disconnect).toBe('function')
   })
 
   it('throws a SqliteConnectionError when the constructor throws (nonexistent path)', async () => {
-    ;(Database as unknown as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
+    MockDatabase.mockImplementationOnce(() => {
       throw new Error('SQLITE_CANTOPEN: unable to open database file')
     })
 
@@ -53,9 +56,25 @@ describe('connectSqlite', () => {
     })
   })
 
+  it('throws a SqliteConnectionError when config.type is not sqlite', async () => {
+    const wrongTypeConfig: ConnectionConfig = {
+      type: 'postgresql',
+      host: 'localhost',
+      port: 5432,
+      database: 'mydb',
+      username: 'user',
+      password: 'pass',
+    }
+
+    await expect(connectSqlite(wrongTypeConfig)).rejects.toMatchObject({
+      name: 'SqliteConnectionError',
+      message: expect.stringContaining('sqlite'),
+    })
+  })
+
   it('includes the original error as cause in the thrown error', async () => {
     const originalError = new Error('SQLITE_CANTOPEN: unable to open database file')
-    ;(Database as unknown as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
+    MockDatabase.mockImplementationOnce(() => {
       throw originalError
     })
 
@@ -73,9 +92,7 @@ describe('DatabaseClient returned by connectSqlite', () => {
 
   it('calls close() on the underlying Database when disconnect() is called', async () => {
     const mockClose = vi.fn()
-    ;(Database as unknown as ReturnType<typeof vi.fn>).mockImplementationOnce(() => ({
-      close: mockClose,
-    }))
+    MockDatabase.mockImplementationOnce(() => ({ close: mockClose }))
 
     const client = await connectSqlite(validSqliteConfig)
     await client.disconnect()
@@ -84,24 +101,24 @@ describe('DatabaseClient returned by connectSqlite', () => {
   })
 
   it('resolves without throwing when disconnect() succeeds', async () => {
-    ;(Database as unknown as ReturnType<typeof vi.fn>).mockImplementationOnce(() => ({
-      close: vi.fn(),
-    }))
+    MockDatabase.mockImplementationOnce(() => ({ close: vi.fn() }))
 
     const client = await connectSqlite(validSqliteConfig)
     await expect(client.disconnect()).resolves.toBeUndefined()
   })
 
-  it('propagates the error when the underlying close() throws', async () => {
+  it('throws a SqliteConnectionError when the underlying close() throws', async () => {
     const closeError = new Error('database disk image is malformed')
-    ;(Database as unknown as ReturnType<typeof vi.fn>).mockImplementationOnce(() => ({
-      close: vi.fn(() => {
-        throw closeError
-      }),
+    MockDatabase.mockImplementationOnce(() => ({
+      close: vi.fn(() => { throw closeError }),
     }))
 
     const client = await connectSqlite(validSqliteConfig)
-    await expect(client.disconnect()).rejects.toThrow('database disk image is malformed')
+    await expect(client.disconnect()).rejects.toMatchObject({
+      name: 'SqliteConnectionError',
+      message: expect.stringContaining('database disk image is malformed'),
+      cause: closeError,
+    })
   })
 })
 
