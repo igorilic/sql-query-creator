@@ -65,7 +65,7 @@ interface ConnectionContextValue {
   status: ConnectionStatus
   schema: DatabaseSchema | null
   connecting: boolean
-  connect: (config: ConnectionConfig) => Promise<void>
+  connect: (config: ConnectionConfig) => Promise<boolean>
   disconnect: () => void
 }
 
@@ -78,7 +78,7 @@ const ConnectionContext = createContext<ConnectionContextValue | null>(null)
 export function ConnectionProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState)
 
-  const connect = useCallback(async (config: ConnectionConfig) => {
+  const connect = useCallback(async (config: ConnectionConfig): Promise<boolean> => {
     dispatch({ type: 'CONNECTING' })
     try {
       const connectRes = await fetch('/api/connect', {
@@ -94,7 +94,7 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
           type: 'CONNECTION_ERROR',
           payload: { error: connectBody.error ?? 'Connection failed' },
         })
-        return
+        return false
       }
 
       dispatch({ type: 'CONNECTED', payload: { type: connectBody.type } })
@@ -111,9 +111,12 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
       } catch {
         // Schema unavailable — connection remains established
       }
+
+      return true
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error'
       dispatch({ type: 'CONNECTION_ERROR', payload: { error: message } })
+      return false
     }
   }, [])
 

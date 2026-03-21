@@ -15,10 +15,16 @@ export default function HomePage() {
   const { status, schema, connect } = useConnection()
   const { messages, loading, currentSql, sendMessage } = useChat()
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [editorSql, setEditorSql] = useState<string>('')
+
+  // Keep editor in sync with AI-generated SQL, but allow user edits
+  const displaySql = editorSql || (currentSql ?? '')
 
   async function handleConnect(config: ConnectionConfig) {
-    await connect(config)
-    setDialogOpen(false)
+    const success = await connect(config)
+    if (success) {
+      setDialogOpen(false)
+    }
   }
 
   return (
@@ -28,7 +34,7 @@ export default function HomePage() {
         sidebar={<SchemaBrowser schema={schema} />}
       >
         <ChatPanel messages={messages} loading={loading} onSend={sendMessage} />
-        <QueryEditor value={currentSql ?? ''} onChange={() => {}} />
+        <QueryEditor value={displaySql} onChange={setEditorSql} />
       </SidebarLayout>
 
       <ConnectionDialog

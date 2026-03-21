@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import React from 'react'
 
 // ---------------------------------------------------------------------------
@@ -79,7 +79,7 @@ vi.mock('@ui/sidebar-layout', () => ({
 import { useConnection } from '../../contexts/connection-context'
 import { useChat } from '../../contexts/chat-context'
 import HomePage from '../page'
-import type { ConnectionStatus, DatabaseSchema } from '@repo/shared/types'
+import type { ChatMessage, ConnectionStatus, DatabaseSchema } from '@repo/shared/types'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -104,7 +104,7 @@ function setupMocks(overrides: {
   schema?: DatabaseSchema | null
   connecting?: boolean
   currentSql?: string | null
-  messages?: []
+  messages?: ChatMessage[]
   loading?: boolean
 } = {}) {
   const connectMock = vi.fn()
@@ -214,16 +214,36 @@ describe('HomePage', () => {
     expect(screen.queryByTestId('connection-dialog')).not.toBeInTheDocument()
   })
 
-  it('calls connect and closes dialog when onConnect fires', async () => {
+  it('calls connect and closes dialog when onConnect fires successfully', async () => {
     const { connectMock } = setupMocks()
+    connectMock.mockResolvedValue(true)
     render(<HomePage />)
 
     fireEvent.click(screen.getByRole('button', { name: /connect/i }))
-    fireEvent.click(screen.getByRole('button', { name: /submit/i }))
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /submit/i }))
+    })
 
     expect(connectMock).toHaveBeenCalledOnce()
-    // Dialog should close after connect
+    // Dialog should close after successful connect
     expect(screen.queryByTestId('connection-dialog')).not.toBeInTheDocument()
+  })
+
+  it('keeps connection dialog open when connect fails', async () => {
+    const { connectMock } = setupMocks()
+    connectMock.mockResolvedValue(false)
+    render(<HomePage />)
+
+    fireEvent.click(screen.getByRole('button', { name: /connect/i }))
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /submit/i }))
+    })
+
+    expect(connectMock).toHaveBeenCalledOnce()
+    // Dialog must remain open so the user can see/retry after failure
+    expect(screen.getByTestId('connection-dialog')).toBeInTheDocument()
   })
 
   // -------------------------------------------------------------------------
@@ -281,23 +301,17 @@ describe('Providers', () => {
     expect(screen.getByTestId('child')).toBeInTheDocument()
   })
 
-  it('provides ConnectionContext so useConnection does not throw', async () => {
+  it('renders multiple levels of children without error', async () => {
     const { Providers } = await import('../providers')
-    // If ConnectionProvider is missing, useConnection would throw
-    // We test by rendering a consumer component inside Providers
-    function Consumer() {
-      const { useConnection: useConn } = require('../../contexts/connection-context')
-      // Connection mock is set in outer scope — just check no throw
-      useConn()
-      return <div data-testid="consumer" />
-    }
-
     render(
       <Providers>
-        <Consumer />
+        <section data-testid="outer">
+          <span data-testid="inner">nested</span>
+        </section>
       </Providers>,
     )
 
-    expect(screen.getByTestId('consumer')).toBeInTheDocument()
+    expect(screen.getByTestId('outer')).toBeInTheDocument()
+    expect(screen.getByTestId('inner')).toHaveTextContent('nested')
   })
 })
