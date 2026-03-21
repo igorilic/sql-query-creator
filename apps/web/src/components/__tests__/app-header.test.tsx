@@ -12,7 +12,7 @@ import type { ConnectionStatus } from '@repo/shared/types'
 vi.mock('@ui/navbar', () => ({
   Navbar: ({ children }: { children: React.ReactNode }) => <nav>{children}</nav>,
   NavbarSection: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  NavbarItem: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  NavbarItem: ({ children }: { children: React.ReactNode }) => <button>{children}</button>,
   NavbarLabel: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
   NavbarSpacer: () => <div aria-hidden="true" />,
 }))
@@ -154,5 +154,15 @@ describe('AppHeader', () => {
     // Must NOT default-label as SQLite when type is missing
     expect(screen.queryByText(/sqlite/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/postgresql/i)).not.toBeInTheDocument()
+  })
+
+  // -------------------------------------------------------------------------
+  // No nested interactive elements (issue #3)
+  // -------------------------------------------------------------------------
+  it('does not nest interactive elements (button inside button)', () => {
+    const { container } = renderHeader()
+
+    const nestedButtons = container.querySelectorAll('button button')
+    expect(nestedButtons.length).toBe(0)
   })
 })
