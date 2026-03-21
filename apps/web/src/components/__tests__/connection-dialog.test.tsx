@@ -149,4 +149,125 @@ describe('ConnectionDialog', () => {
       filePath: '/data/mydb.sqlite',
     })
   })
+
+  // -------------------------------------------------------------------------
+  // State reset on close (finding #1)
+  // -------------------------------------------------------------------------
+  it('resets all fields when the dialog is closed', () => {
+    const { onClose } = renderDialog()
+
+    // Fill in PostgreSQL fields
+    fireEvent.change(screen.getByLabelText(/^host$/i), { target: { value: 'prod-server' } })
+    fireEvent.change(screen.getByLabelText(/^database$/i), { target: { value: 'mydb' } })
+    fireEvent.change(screen.getByLabelText(/^username$/i), { target: { value: 'admin' } })
+    fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'supersecret' } })
+
+    // Close (cancel)
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }))
+    expect(onClose).toHaveBeenCalledOnce()
+
+    // Fields should be empty now
+    expect((screen.getByLabelText(/^host$/i) as HTMLInputElement).value).toBe('')
+    expect((screen.getByLabelText(/^password$/i) as HTMLInputElement).value).toBe('')
+  })
+
+  // -------------------------------------------------------------------------
+  // Port validation — NaN guard (finding #2)
+  // -------------------------------------------------------------------------
+  it('submit button is disabled when port is non-numeric', () => {
+    renderDialog()
+
+    fireEvent.change(screen.getByLabelText(/^host$/i), { target: { value: 'localhost' } })
+    fireEvent.change(screen.getByLabelText(/^port$/i), { target: { value: 'abc' } })
+    fireEvent.change(screen.getByLabelText(/^database$/i), { target: { value: 'mydb' } })
+    fireEvent.change(screen.getByLabelText(/^username$/i), { target: { value: 'admin' } })
+
+    expect(screen.getByRole('button', { name: /^connect$/i })).toBeDisabled()
+  })
+
+  it('submit button is disabled when port is out of range (> 65535)', () => {
+    renderDialog()
+
+    fireEvent.change(screen.getByLabelText(/^host$/i), { target: { value: 'localhost' } })
+    fireEvent.change(screen.getByLabelText(/^port$/i), { target: { value: '99999' } })
+    fireEvent.change(screen.getByLabelText(/^database$/i), { target: { value: 'mydb' } })
+    fireEvent.change(screen.getByLabelText(/^username$/i), { target: { value: 'admin' } })
+
+    expect(screen.getByRole('button', { name: /^connect$/i })).toBeDisabled()
+  })
+
+  it('emits numeric port in onConnect payload (never NaN)', () => {
+    const { onConnect } = renderDialog()
+
+    fireEvent.change(screen.getByLabelText(/^host$/i), { target: { value: 'localhost' } })
+    fireEvent.change(screen.getByLabelText(/^port$/i), { target: { value: '5433' } })
+    fireEvent.change(screen.getByLabelText(/^database$/i), { target: { value: 'mydb' } })
+    fireEvent.change(screen.getByLabelText(/^username$/i), { target: { value: 'admin' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /^connect$/i }))
+
+    const config = (onConnect as ReturnType<typeof vi.fn>).mock.calls[0][0]
+    expect(typeof config.port).toBe('number')
+    expect(Number.isNaN(config.port)).toBe(false)
+    expect(config.port).toBe(5433)
+  })
+
+  // -------------------------------------------------------------------------
+  // Explicit id/htmlFor accessibility (finding #3)
+  // -------------------------------------------------------------------------
+  it('inputs have explicit id attributes that match label htmlFor', () => {
+    renderDialog()
+
+    const hostInput = screen.getByLabelText(/^host$/i)
+    expect(hostInput).toHaveAttribute('id')
+
+    const portInput = screen.getByLabelText(/^port$/i)
+    expect(portInput).toHaveAttribute('id')
+
+    const dbInput = screen.getByLabelText(/^database$/i)
+    expect(dbInput).toHaveAttribute('id')
+
+    const userInput = screen.getByLabelText(/^username$/i)
+    expect(userInput).toHaveAttribute('id')
+
+    const passInput = screen.getByLabelText(/^password$/i)
+    expect(passInput).toHaveAttribute('id')
+  })
+
+  it('SQLite file path input has explicit id attribute', () => {
+    renderDialog()
+    fireEvent.change(screen.getByLabelText(/database type/i), { target: { value: 'sqlite' } })
+
+    const fileInput = screen.getByLabelText(/file path/i)
+    expect(fileInput).toHaveAttribute('id')
+  })
+
+  // -------------------------------------------------------------------------
+  // Dialog closes after successful submit (finding #4)
+  // -------------------------------------------------------------------------
+  it('calls onClose after successful PostgreSQL submit', () => {
+    const { onConnect, onClose } = renderDialog()
+
+    fireEvent.change(screen.getByLabelText(/^host$/i), { target: { value: 'localhost' } })
+    fireEvent.change(screen.getByLabelText(/^port$/i), { target: { value: '5432' } })
+    fireEvent.change(screen.getByLabelText(/^database$/i), { target: { value: 'mydb' } })
+    fireEvent.change(screen.getByLabelText(/^username$/i), { target: { value: 'admin' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /^connect$/i }))
+
+    expect(onConnect).toHaveBeenCalledOnce()
+    expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it('calls onClose after successful SQLite submit', () => {
+    const { onConnect, onClose } = renderDialog()
+
+    fireEvent.change(screen.getByLabelText(/database type/i), { target: { value: 'sqlite' } })
+    fireEvent.change(screen.getByLabelText(/file path/i), { target: { value: '/data/db.sqlite' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /^connect$/i }))
+
+    expect(onConnect).toHaveBeenCalledOnce()
+    expect(onClose).toHaveBeenCalledOnce()
+  })
 })

@@ -35,10 +35,28 @@ export function ConnectionDialog({ open, onClose, onConnect }: ConnectionDialogP
   // SQLite fields
   const [filePath, setFilePath] = useState('')
 
+  const portNumber = parseInt(port, 10)
+  const portValid = /^\d+$/.test(port) && portNumber > 0 && portNumber <= 65535
+
   const isValid =
     dbType === 'postgresql'
-      ? Boolean(host && port && database && username)
+      ? Boolean(host && portValid && database && username)
       : Boolean(filePath)
+
+  function resetFields() {
+    setDbType('postgresql')
+    setHost('')
+    setPort('5432')
+    setDatabase('')
+    setUsername('')
+    setPassword('')
+    setFilePath('')
+  }
+
+  function handleClose() {
+    resetFields()
+    onClose()
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -48,7 +66,7 @@ export function ConnectionDialog({ open, onClose, onConnect }: ConnectionDialogP
       onConnect({
         type: 'postgresql',
         host,
-        port: parseInt(port, 10),
+        port: portNumber,
         database,
         username,
         password,
@@ -56,18 +74,20 @@ export function ConnectionDialog({ open, onClose, onConnect }: ConnectionDialogP
     } else {
       onConnect({ type: 'sqlite', filePath })
     }
+    onClose()
   }
 
   return (
-    <Dialog open={open} onClose={onClose}>
+    <Dialog open={open} onClose={handleClose}>
       <DialogTitle>Connect to Database</DialogTitle>
       <form onSubmit={handleSubmit}>
         <DialogBody>
           <Fieldset>
             <FieldGroup>
               <Field>
-                <Label>Database type</Label>
+                <Label htmlFor="db-type">Database type</Label>
                 <Select
+                  id="db-type"
                   value={dbType}
                   onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                     setDbType(e.target.value as 'postgresql' | 'sqlite')
@@ -81,16 +101,18 @@ export function ConnectionDialog({ open, onClose, onConnect }: ConnectionDialogP
               {dbType === 'postgresql' && (
                 <>
                   <Field>
-                    <Label>Host</Label>
+                    <Label htmlFor="pg-host">Host</Label>
                     <Input
+                      id="pg-host"
                       value={host}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setHost(e.target.value)}
                       placeholder="localhost"
                     />
                   </Field>
                   <Field>
-                    <Label>Port</Label>
+                    <Label htmlFor="pg-port">Port</Label>
                     <Input
+                      id="pg-port"
                       type="number"
                       value={port}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPort(e.target.value)}
@@ -98,22 +120,25 @@ export function ConnectionDialog({ open, onClose, onConnect }: ConnectionDialogP
                     />
                   </Field>
                   <Field>
-                    <Label>Database</Label>
+                    <Label htmlFor="pg-database">Database</Label>
                     <Input
+                      id="pg-database"
                       value={database}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDatabase(e.target.value)}
                     />
                   </Field>
                   <Field>
-                    <Label>Username</Label>
+                    <Label htmlFor="pg-username">Username</Label>
                     <Input
+                      id="pg-username"
                       value={username}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
                     />
                   </Field>
                   <Field>
-                    <Label>Password</Label>
+                    <Label htmlFor="pg-password">Password</Label>
                     <Input
+                      id="pg-password"
                       type="password"
                       value={password}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
@@ -124,8 +149,9 @@ export function ConnectionDialog({ open, onClose, onConnect }: ConnectionDialogP
 
               {dbType === 'sqlite' && (
                 <Field>
-                  <Label>File path</Label>
+                  <Label htmlFor="sqlite-path">File path</Label>
                   <Input
+                    id="sqlite-path"
                     value={filePath}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilePath(e.target.value)}
                     placeholder="/path/to/database.db"
@@ -136,7 +162,7 @@ export function ConnectionDialog({ open, onClose, onConnect }: ConnectionDialogP
           </Fieldset>
         </DialogBody>
         <DialogActions>
-          <Button plain type="button" onClick={onClose}>
+          <Button plain type="button" onClick={handleClose}>
             Cancel
           </Button>
           <Button type="submit" disabled={!isValid}>
