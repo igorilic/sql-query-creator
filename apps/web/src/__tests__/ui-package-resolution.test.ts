@@ -8,7 +8,8 @@ describe('UI package resolution (@ui/* path aliases)', () => {
   it('resolves @ui/button and exports a Button component', async () => {
     const mod = await import('@ui/button')
     expect(mod.Button).toBeDefined()
-    expect(typeof mod.Button).toBe('function')
+    // forwardRef components have typeof === 'object'; function components have typeof === 'function'
+    expect(['function', 'object']).toContain(typeof mod.Button)
   })
 
   it('resolves @ui/input and exports an Input component', async () => {

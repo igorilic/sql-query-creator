@@ -203,6 +203,10 @@ describe('sendChatCompletion', () => {
     }))
 
     const promise = collectChunks(sendChatCompletion(MESSAGES))
+    // Attach an immediate no-op rejection handler so Node/Vitest does not fire
+    // "unhandledRejection" while fake timers advance before we reach the try/catch.
+    // The original promise is still rejected; the await below will still throw.
+    promise.catch(() => {})
 
     // Advance just under 30s — should not reject yet
     await vi.advanceTimersByTimeAsync(29_000)
