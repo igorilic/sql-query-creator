@@ -20,12 +20,15 @@ interface AppHeaderProps {
 // ---------------------------------------------------------------------------
 
 function statusLabel(status: ConnectionStatus): string {
+  if (status.error) return 'Connection error'
   if (!status.connected) return 'Not connected'
-  const db = status.type === 'postgresql' ? 'PostgreSQL' : 'SQLite'
-  return `Connected — ${db}`
+  if (status.type === 'postgresql') return 'Connected — PostgreSQL'
+  if (status.type === 'sqlite') return 'Connected — SQLite'
+  return 'Connected'
 }
 
-function statusColor(status: ConnectionStatus): 'green' | 'zinc' {
+function statusColor(status: ConnectionStatus): 'green' | 'red' | 'zinc' {
+  if (status.error) return 'red'
   return status.connected ? 'green' : 'zinc'
 }
 

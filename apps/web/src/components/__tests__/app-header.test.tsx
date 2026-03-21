@@ -34,6 +34,8 @@ vi.mock('@ui/button', () => ({
 const disconnectedStatus: ConnectionStatus = { connected: false }
 const connectedPg: ConnectionStatus = { connected: true, type: 'postgresql' }
 const connectedSqlite: ConnectionStatus = { connected: true, type: 'sqlite' }
+const errorStatus: ConnectionStatus = { connected: false, error: 'ECONNREFUSED' }
+const connectedNoType: ConnectionStatus = { connected: true }
 
 function renderHeader(overrides: Partial<React.ComponentProps<typeof AppHeader>> = {}) {
   const props = {
@@ -125,5 +127,32 @@ describe('AppHeader', () => {
     renderHeader()
 
     expect(screen.getByText(/sql query creator/i)).toBeInTheDocument()
+  })
+
+  // -------------------------------------------------------------------------
+  // Error state (Finding 1)
+  // -------------------------------------------------------------------------
+  it('shows "Connection error" when status has an error', () => {
+    renderHeader({ status: errorStatus })
+
+    expect(screen.getByText(/connection error/i)).toBeInTheDocument()
+  })
+
+  it('does not show "Not connected" when status has an error', () => {
+    renderHeader({ status: errorStatus })
+
+    expect(screen.queryByText(/not connected/i)).not.toBeInTheDocument()
+  })
+
+  // -------------------------------------------------------------------------
+  // Connected with no type (Finding 2)
+  // -------------------------------------------------------------------------
+  it('shows "Connected" without a dialect when type is absent', () => {
+    renderHeader({ status: connectedNoType })
+
+    expect(screen.getByText(/connected/i)).toBeInTheDocument()
+    // Must NOT default-label as SQLite when type is missing
+    expect(screen.queryByText(/sqlite/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/postgresql/i)).not.toBeInTheDocument()
   })
 })
