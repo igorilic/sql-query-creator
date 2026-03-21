@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import React from 'react'
 
 // ---------------------------------------------------------------------------
@@ -28,6 +28,25 @@ vi.mock('@uiw/react-codemirror', () => ({
 
 vi.mock('@codemirror/lang-sql', () => ({
   sql: vi.fn(() => ({})),
+}))
+
+vi.mock('@ui/button', () => ({
+  Button: ({
+    children,
+    onClick,
+    'aria-label': ariaLabel,
+    type,
+  }: {
+    children: React.ReactNode
+    onClick?: () => void
+    'aria-label'?: string
+    type?: string
+    outline?: boolean
+  }) => (
+    <button type={(type as 'button' | 'submit' | 'reset') ?? 'button'} onClick={onClick} aria-label={ariaLabel}>
+      {children}
+    </button>
+  ),
 }))
 
 import { QueryEditor } from '../query-editor'
@@ -123,6 +142,48 @@ describe('QueryEditor', () => {
     fireEvent.click(screen.getByRole('button', { name: /copy/i }))
 
     expect(writeTextMock).toHaveBeenCalledWith('SELECT id FROM products;')
+  })
+
+  it('calls navigator.clipboard.writeText with empty string when value is empty', () => {
+    renderEditor({ value: '' })
+
+    fireEvent.click(screen.getByRole('button', { name: /copy/i }))
+
+    expect(writeTextMock).toHaveBeenCalledOnce()
+    expect(writeTextMock).toHaveBeenCalledWith('')
+  })
+
+  it('shows an error message when clipboard write is rejected', async () => {
+    writeTextMock.mockRejectedValue(new Error('Permission denied'))
+    renderEditor()
+
+    fireEvent.click(screen.getByRole('button', { name: /copy/i }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeInTheDocument()
+      expect(screen.getByRole('alert')).toHaveTextContent(/failed to copy/i)
+    })
+  })
+
+  it('does not throw an uncaught error when clipboard write is rejected', async () => {
+    writeTextMock.mockRejectedValue(new Error('Permission denied'))
+    renderEditor()
+
+    await expect(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /copy/i }))
+      await waitFor(() => screen.getByRole('alert'))
+    }).not.toThrow()
+  })
+
+  // -------------------------------------------------------------------------
+  // Toolbar accessibility
+  // -------------------------------------------------------------------------
+  it('renders the toolbar with role="toolbar" and aria-label', () => {
+    renderEditor()
+
+    const toolbar = screen.getByRole('toolbar')
+    expect(toolbar).toBeInTheDocument()
+    expect(toolbar).toHaveAttribute('aria-label', 'Editor actions')
   })
 
   // -------------------------------------------------------------------------

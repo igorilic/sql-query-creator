@@ -1,8 +1,9 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
 import { sql } from '@codemirror/lang-sql'
+import { Button } from '@ui/button'
 
 // ---------------------------------------------------------------------------
 // Props
@@ -23,22 +24,38 @@ export function QueryEditor({
   onChange,
   placeholder = '-- Write your SQL here',
 }: QueryEditorProps) {
-  function handleCopy() {
-    navigator.clipboard.writeText(value)
+  const [copyError, setCopyError] = useState<string | null>(null)
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopyError(null)
+    } catch {
+      setCopyError('Failed to copy')
+    }
   }
 
   return (
     <div className="flex flex-col h-full">
       {/* Toolbar */}
-      <div className="flex justify-end p-2 border-b">
-        <button
+      <div
+        role="toolbar"
+        aria-label="Editor actions"
+        className="flex items-center justify-end gap-2 p-2 border-b"
+      >
+        {copyError && (
+          <span role="alert" className="text-sm text-red-600">
+            {copyError}
+          </span>
+        )}
+        <Button
           type="button"
+          outline
           onClick={handleCopy}
           aria-label="Copy SQL"
-          className="text-sm px-3 py-1 rounded border hover:bg-gray-50"
         >
           Copy
-        </button>
+        </Button>
       </div>
 
       {/* Editor */}
