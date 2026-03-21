@@ -51,9 +51,9 @@ export function AppHeader({ status, onConnectClick }: AppHeaderProps) {
         <NavbarItem>
           <Badge color={statusColor(status)}>{statusLabel(status)}</Badge>
         </NavbarItem>
-        <NavbarItem>
+        <div className="flex items-center">
           <Button onClick={onConnectClick}>Connect</Button>
-        </NavbarItem>
+        </div>
       </NavbarSection>
     </Navbar>
   )

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import React from 'react'
 import { AppHeader } from '../app-header'
@@ -12,7 +12,7 @@ import type { ConnectionStatus } from '@repo/shared/types'
 vi.mock('@ui/navbar', () => ({
   Navbar: ({ children }: { children: React.ReactNode }) => <nav>{children}</nav>,
   NavbarSection: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  NavbarItem: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  NavbarItem: ({ children }: { children: React.ReactNode }) => <button>{children}</button>,
   NavbarLabel: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
   NavbarSpacer: () => <div aria-hidden="true" />,
 }))
@@ -53,6 +53,19 @@ function renderHeader(overrides: Partial<React.ComponentProps<typeof AppHeader>>
 describe('AppHeader', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // The NavbarItem mock renders <button>, so every AppHeader render in the
+    // RED phase triggers React's "cannot be a descendant of <button>" warning.
+    // Suppress that specific warning here so it doesn't bury other output;
+    // the intentional failing test still catches the structural bug.
+    vi.spyOn(console, 'error').mockImplementation((message: unknown) => {
+      if (typeof message === 'string' && message.includes('cannot be a descendant')) return
+      // Surface any other console.error so real issues are not hidden.
+      process.stderr.write(`[unexpected console.error] ${String(message)}\n`)
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   // -------------------------------------------------------------------------
@@ -109,13 +122,20 @@ describe('AppHeader', () => {
   it('renders a "Connect" button', () => {
     renderHeader()
 
-    expect(screen.getByRole('button', { name: /connect/i })).toBeInTheDocument()
+    // getAllByRole handles the case where NavbarItem (a <button>) wraps the
+    // Button component — both carry the accessible name "Connect".
+    const connectButtons = screen.getAllByRole('button', { name: /connect/i })
+    expect(connectButtons.length).toBeGreaterThan(0)
   })
 
   it('calls onConnectClick when "Connect" button is clicked', () => {
     const { onConnectClick } = renderHeader()
 
-    fireEvent.click(screen.getByRole('button', { name: /connect/i }))
+    // The innermost Button renders <button type="button">. When NavbarItem is
+    // also a <button>, getAllByRole returns both; clicking either fires the
+    // handler because the event bubbles up. Click the last (innermost) match.
+    const connectButtons = screen.getAllByRole('button', { name: /connect/i })
+    fireEvent.click(connectButtons[connectButtons.length - 1])
 
     expect(onConnectClick).toHaveBeenCalledOnce()
   })
@@ -154,5 +174,15 @@ describe('AppHeader', () => {
     // Must NOT default-label as SQLite when type is missing
     expect(screen.queryByText(/sqlite/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/postgresql/i)).not.toBeInTheDocument()
+  })
+
+  // -------------------------------------------------------------------------
+  // No nested interactive elements (issue #3)
+  // -------------------------------------------------------------------------
+  it('does not nest interactive elements (button inside button)', () => {
+    const { container } = renderHeader()
+
+    const nestedButtons = container.querySelectorAll('button button')
+    expect(nestedButtons.length).toBe(0)
   })
 })
