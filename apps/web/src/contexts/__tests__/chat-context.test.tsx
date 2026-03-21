@@ -31,7 +31,7 @@ function makeSseResponse(events: string[]): Response {
 // ---------------------------------------------------------------------------
 
 function TestConsumer() {
-  const { messages, loading, currentSql, sendMessage } = useChat()
+  const { messages, loading, currentSql, sendMessage, clearChat } = useChat()
   return (
     <div>
       <span data-testid="message-count">{messages.length}</span>
@@ -46,6 +46,9 @@ function TestConsumer() {
       </ul>
       <button data-testid="send-btn" onClick={() => sendMessage('show me all users')}>
         Send
+      </button>
+      <button data-testid="clear-btn" onClick={clearChat}>
+        Clear
       </button>
     </div>
   )
@@ -249,6 +252,113 @@ describe('ChatContext', () => {
     await waitFor(() => {
       expect(screen.getByTestId('loading').textContent).toBe('false')
     })
+  })
+
+  // -------------------------------------------------------------------------
+  // Concurrent sendMessage guard (Finding 1)
+  // -------------------------------------------------------------------------
+  it('ignores a second sendMessage call while the first is still streaming', async () => {
+    // Deferred resolution — lets us control when the first fetch resolves
+    let resolveFirst!: (r: Response) => void
+    const firstFetch = new Promise<Response>((resolve) => {
+      resolveFirst = resolve
+    })
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+    fetchSpy.mockReturnValueOnce(firstFetch)
+
+    render(<TestConsumer />, { wrapper: Wrapper })
+
+    // Start the first send (does not await — intentionally leaves it in-flight)
+    act(() => {
+      screen.getByTestId('send-btn').click()
+    })
+
+    // At this point loading should be true — fire a second send synchronously
+    act(() => {
+      screen.getByTestId('send-btn').click()
+    })
+
+    // Resolve the first stream so the component can settle
+    resolveFirst(
+      makeSseResponse(['data: {"token":"ok"}\n\n', 'data: [DONE]\n\n']),
+    )
+
+    await waitFor(() => expect(screen.getByTestId('loading').textContent).toBe('false'))
+
+    // fetch must have been called exactly once — the second send was blocked
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+  })
+
+  // -------------------------------------------------------------------------
+  // STREAM_ERROR removes orphan placeholder (Finding 2)
+  // -------------------------------------------------------------------------
+  it('removes the empty assistant placeholder from messages on SSE error', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      makeSseResponse(['event: error\n', 'data: {"error":"LM Studio unavailable"}\n\n']),
+    )
+
+    render(<TestConsumer />, { wrapper: Wrapper })
+
+    await act(async () => {
+      screen.getByTestId('send-btn').click()
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('loading').textContent).toBe('false')
+    })
+
+    // Only the user message remains — no blank assistant bubble
+    expect(screen.getByTestId('message-count').textContent).toBe('1')
+  })
+
+  it('removes the empty assistant placeholder from messages on network error', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('Network error'))
+
+    render(<TestConsumer />, { wrapper: Wrapper })
+
+    await act(async () => {
+      screen.getByTestId('send-btn').click()
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('loading').textContent).toBe('false')
+    })
+
+    // Only the user message remains — no blank assistant bubble
+    expect(screen.getByTestId('message-count').textContent).toBe('1')
+  })
+
+  // -------------------------------------------------------------------------
+  // clearChat action (Finding 3)
+  // -------------------------------------------------------------------------
+  it('clearChat resets messages, currentSql, and loading back to initial state', async () => {
+    const assistantContent = 'Here is the query:\n```sql\nSELECT 1\n```'
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      makeSseResponse([
+        `data: ${JSON.stringify({ token: assistantContent })}\n\n`,
+        'data: [DONE]\n\n',
+      ]),
+    )
+
+    render(<TestConsumer />, { wrapper: Wrapper })
+
+    // Send a message so we have state to clear
+    await act(async () => {
+      screen.getByTestId('send-btn').click()
+    })
+    await waitFor(() => expect(screen.getByTestId('loading').textContent).toBe('false'))
+
+    expect(screen.getByTestId('message-count').textContent).toBe('2')
+    expect(screen.getByTestId('current-sql').textContent).toBe('SELECT 1')
+
+    // Clear
+    act(() => {
+      screen.getByTestId('clear-btn').click()
+    })
+
+    expect(screen.getByTestId('message-count').textContent).toBe('0')
+    expect(screen.getByTestId('current-sql').textContent).toBe('null')
+    expect(screen.getByTestId('loading').textContent).toBe('false')
   })
 
   // -------------------------------------------------------------------------

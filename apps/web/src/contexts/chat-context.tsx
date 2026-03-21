@@ -35,7 +35,8 @@ type Action =
   | { type: 'STREAM_START'; payload: { message: ChatMessage } }
   | { type: 'STREAM_TOKEN'; payload: { id: string; token: string } }
   | { type: 'STREAM_DONE'; payload: { id: string; sql: string | null } }
-  | { type: 'STREAM_ERROR' }
+  | { type: 'STREAM_ERROR'; payload: { id: string } }
+  | { type: 'CLEAR_CHAT' }
 
 function reducer(state: ChatState, action: Action): ChatState {
   switch (action.type) {
@@ -70,7 +71,14 @@ function reducer(state: ChatState, action: Action): ChatState {
       }
     }
     case 'STREAM_ERROR': {
-      return { ...state, loading: false }
+      return {
+        ...state,
+        loading: false,
+        messages: state.messages.filter((m) => m.id !== action.payload.id),
+      }
+    }
+    case 'CLEAR_CHAT': {
+      return initialState
     }
     default:
       return state
@@ -135,6 +143,7 @@ interface ChatContextValue {
   loading: boolean
   currentSql: string | null
   sendMessage: (text: string) => Promise<void>
+  clearChat: () => void
 }
 
 const ChatContext = createContext<ChatContextValue | null>(null)
@@ -146,12 +155,17 @@ const ChatContext = createContext<ChatContextValue | null>(null)
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState)
 
-  // Stable ref so sendMessage always reads the latest messages without needing
-  // to be recreated on every state change.
+  // Stable refs so callbacks always read the latest values without stale closures.
   const messagesRef = useRef<ChatMessage[]>(state.messages)
   messagesRef.current = state.messages
 
+  const loadingRef = useRef<boolean>(state.loading)
+  loadingRef.current = state.loading
+
   const sendMessage = useCallback(async (text: string) => {
+    // Guard against concurrent in-flight streams
+    if (loadingRef.current) return
+
     const history = messagesRef.current
 
     const userMessage: ChatMessage = {
@@ -183,7 +197,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       })
 
       if (!res.ok || !res.body) {
-        dispatch({ type: 'STREAM_ERROR' })
+        dispatch({ type: 'STREAM_ERROR', payload: { id: assistantId } })
         return
       }
 
@@ -193,7 +207,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           fullContent += event.token
           dispatch({ type: 'STREAM_TOKEN', payload: { id: assistantId, token: event.token } })
         } else if (event.error !== undefined) {
-          dispatch({ type: 'STREAM_ERROR' })
+          dispatch({ type: 'STREAM_ERROR', payload: { id: assistantId } })
           return
         }
       }
@@ -202,8 +216,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const sql = sqls[0] ?? null
       dispatch({ type: 'STREAM_DONE', payload: { id: assistantId, sql } })
     } catch {
-      dispatch({ type: 'STREAM_ERROR' })
+      dispatch({ type: 'STREAM_ERROR', payload: { id: assistantId } })
     }
+  }, [])
+
+  const clearChat = useCallback(() => {
+    dispatch({ type: 'CLEAR_CHAT' })
   }, [])
 
   return (
@@ -213,6 +231,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         loading: state.loading,
         currentSql: state.currentSql,
         sendMessage,
+        clearChat,
       }}
     >
       {children}
