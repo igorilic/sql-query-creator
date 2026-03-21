@@ -1,8 +1,20 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import React from 'react'
 import { SchemaBrowser } from '../schema-browser'
 import type { DatabaseSchema } from '@repo/shared/types'
+
+// ---------------------------------------------------------------------------
+// Mocks — @ui/sidebar imports motion/react which is not installed in test env
+// ---------------------------------------------------------------------------
+vi.mock('@ui/sidebar', () => ({
+  SidebarSection: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  SidebarHeading: ({ children }: { children: React.ReactNode }) => <h3>{children}</h3>,
+  SidebarItem: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => (
+    <button type="button" onClick={onClick}>{children}</button>
+  ),
+  SidebarLabel: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+}))
 
 // ---------------------------------------------------------------------------
 // Fixtures
