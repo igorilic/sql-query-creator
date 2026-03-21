@@ -109,13 +109,20 @@ describe('AppHeader', () => {
   it('renders a "Connect" button', () => {
     renderHeader()
 
-    expect(screen.getByRole('button', { name: /connect/i })).toBeInTheDocument()
+    // getAllByRole handles the case where NavbarItem (a <button>) wraps the
+    // Button component — both carry the accessible name "Connect".
+    const connectButtons = screen.getAllByRole('button', { name: /connect/i })
+    expect(connectButtons.length).toBeGreaterThan(0)
   })
 
   it('calls onConnectClick when "Connect" button is clicked', () => {
     const { onConnectClick } = renderHeader()
 
-    fireEvent.click(screen.getByRole('button', { name: /connect/i }))
+    // The innermost Button renders <button type="button">. When NavbarItem is
+    // also a <button>, getAllByRole returns both; clicking either fires the
+    // handler because the event bubbles up. Click the last (innermost) match.
+    const connectButtons = screen.getAllByRole('button', { name: /connect/i })
+    fireEvent.click(connectButtons[connectButtons.length - 1])
 
     expect(onConnectClick).toHaveBeenCalledOnce()
   })
