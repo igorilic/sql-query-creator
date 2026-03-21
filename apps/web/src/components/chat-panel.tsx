@@ -38,7 +38,7 @@ export function ChatPanel({ messages, loading, onSend }: ChatPanelProps) {
             <p>{msg.content}</p>
             {msg.sql && (
               <pre>
-                <code role="code">{msg.sql}</code>
+                <code data-testid="sql-block">{msg.sql}</code>
               </pre>
             )}
           </article>
@@ -52,6 +52,7 @@ export function ChatPanel({ messages, loading, onSend }: ChatPanelProps) {
       <form onSubmit={handleSubmit} className="flex gap-2 p-4 border-t">
         <input
           type="text"
+          aria-label="Chat message"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           className="flex-1 border rounded px-2 py-1"

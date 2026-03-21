@@ -59,7 +59,7 @@ describe('ChatPanel', () => {
   it('renders the input field and submit button', () => {
     renderPanel()
 
-    expect(screen.getByRole('textbox')).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: /chat message/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /send/i })).toBeInTheDocument()
   })
 
@@ -114,7 +114,7 @@ describe('ChatPanel', () => {
   it('renders SQL code block inside a <code> element for assistant messages with sql', () => {
     renderPanel({ messages: [assistantMessage] })
 
-    const codeBlock = screen.getByRole('code')
+    const codeBlock = screen.getByTestId('sql-block')
     expect(codeBlock).toBeInTheDocument()
     expect(codeBlock.textContent).toContain('SELECT * FROM users;')
   })
@@ -122,7 +122,7 @@ describe('ChatPanel', () => {
   it('does not render a <code> element when assistant message has no sql', () => {
     renderPanel({ messages: [assistantMessageNoSql] })
 
-    expect(screen.queryByRole('code')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('sql-block')).not.toBeInTheDocument()
   })
 
   // -------------------------------------------------------------------------
@@ -184,6 +184,16 @@ describe('ChatPanel', () => {
 
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'hello' } })
     expect(screen.getByRole('button', { name: /send/i })).not.toBeDisabled()
+  })
+
+  it('does not call onSend when loading even if form is submitted directly', () => {
+    const { onSend } = renderPanel({ loading: true })
+
+    const input = screen.getByRole('textbox', { name: /chat message/i })
+    fireEvent.change(input, { target: { value: 'Show me all users' } })
+    fireEvent.submit(input.closest('form')!)
+
+    expect(onSend).not.toHaveBeenCalled()
   })
 
   // -------------------------------------------------------------------------
