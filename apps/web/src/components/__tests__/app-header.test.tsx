@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import React from 'react'
 import { AppHeader } from '../app-header'
@@ -53,6 +53,19 @@ function renderHeader(overrides: Partial<React.ComponentProps<typeof AppHeader>>
 describe('AppHeader', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // The NavbarItem mock renders <button>, so every AppHeader render in the
+    // RED phase triggers React's "cannot be a descendant of <button>" warning.
+    // Suppress that specific warning here so it doesn't bury other output;
+    // the intentional failing test still catches the structural bug.
+    vi.spyOn(console, 'error').mockImplementation((message: unknown) => {
+      if (typeof message === 'string' && message.includes('cannot be a descendant')) return
+      // Surface any other console.error so real issues are not hidden.
+      process.stderr.write(`[unexpected console.error] ${String(message)}\n`)
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   // -------------------------------------------------------------------------
