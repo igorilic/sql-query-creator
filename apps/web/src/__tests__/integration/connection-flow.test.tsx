@@ -220,6 +220,9 @@ vi.mock('@headlessui/react', () => {
     toggle: () => {},
   })
 
+  // NOTE: `defaultOpen` prop is intentionally not supported by this mock.
+  // SchemaBrowser never passes `defaultOpen`, so all disclosures start closed.
+  // If `defaultOpen` support is ever needed, initialise `open` from that prop here.
   const DisclosureWithCtx = ({
     children,
   }: {
@@ -343,26 +346,25 @@ const sqliteSchema: DatabaseSchema = {
 function mockFetchForConnection(
   type: 'postgresql' | 'sqlite',
   schema: DatabaseSchema,
-): ReturnType<typeof vi.spyOn> {
-  return vi
-    .spyOn(globalThis, 'fetch')
+): void {
+  vi.spyOn(globalThis, 'fetch')
     .mockImplementationOnce(async (url) => {
-      if (String(url).includes('/api/connect')) {
-        return new Response(JSON.stringify({ status: 'connected', type }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        })
+      if (!String(url).includes('/api/connect')) {
+        throw new Error(`[mockFetchForConnection] Unexpected fetch to: ${String(url)} (expected /api/connect)`)
       }
-      return new Response(null, { status: 404 })
+      return new Response(JSON.stringify({ status: 'connected', type }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
     })
     .mockImplementationOnce(async (url) => {
-      if (String(url).includes('/api/schema')) {
-        return new Response(JSON.stringify(schema), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        })
+      if (!String(url).includes('/api/schema')) {
+        throw new Error(`[mockFetchForConnection] Unexpected fetch to: ${String(url)} (expected /api/schema)`)
       }
-      return new Response(null, { status: 404 })
+      return new Response(JSON.stringify(schema), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
     })
 }
 
@@ -509,8 +511,9 @@ describe('Integration: database connection and schema browsing flow', () => {
       expect(screen.getByText('users')).toBeInTheDocument()
     })
 
-    // Columns not yet visible
-    expect(screen.queryByText('email')).not.toBeInTheDocument()
+    // Columns not yet visible (scoped to sidebar to avoid false matches)
+    const sidebar = screen.getByTestId('layout-sidebar')
+    expect(within(sidebar).queryByText('email')).not.toBeInTheDocument()
 
     // Expand the users table
     fireEvent.click(screen.getByRole('button', { name: /users/i }))
@@ -592,12 +595,13 @@ describe('Integration: database connection and schema browsing flow', () => {
       expect(screen.getByTestId('status-badge')).toHaveTextContent('Connected — SQLite')
     })
 
-    // Schema browser now shows SQLite tables, not PG tables
+    // Schema browser now shows SQLite tables; PG tables gone — all in one waitFor
+    // to guard against async schema clearing in the context reducer
     await waitFor(() => {
       expect(screen.getByText('products')).toBeInTheDocument()
+      expect(screen.queryByText('users')).not.toBeInTheDocument()
+      expect(screen.queryByText('orders')).not.toBeInTheDocument()
     })
-    expect(screen.queryByText('users')).not.toBeInTheDocument()
-    expect(screen.queryByText('orders')).not.toBeInTheDocument()
   })
 
   // -------------------------------------------------------------------------

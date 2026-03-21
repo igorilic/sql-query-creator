@@ -223,7 +223,12 @@ describe('ConnectionContext', () => {
       resolveConnect = res
     })
 
-    vi.spyOn(globalThis, 'fetch').mockReturnValueOnce(connectPromise)
+    vi.spyOn(globalThis, 'fetch')
+      .mockReturnValueOnce(connectPromise)
+      // Mock the subsequent /api/schema fetch so it does not bleed into the next test.
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ tables: [], dialect: 'postgresql' }), { status: 200 }),
+      )
 
     render(<TestConsumer />, { wrapper: Wrapper })
 
@@ -249,9 +254,13 @@ describe('ConnectionContext', () => {
   })
 
   it('exposes connecting=false after connect() resolves with an error', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response(JSON.stringify({ status: 'error', error: 'refused' }), { status: 502 }),
-    )
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ status: 'error', error: 'refused' }), { status: 502 }),
+      )
+      // Guard: /api/schema must NOT be called on a connection error (early return).
+      // If this mock is consumed it means the context leaked a schema fetch after failure.
+      .mockRejectedValueOnce(new Error('[test] Unexpected /api/schema fetch after connection error'))
 
     render(<TestConsumer />, { wrapper: Wrapper })
 
