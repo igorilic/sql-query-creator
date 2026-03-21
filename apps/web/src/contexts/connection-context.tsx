@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useReducer, useCallback } from 'react'
 import type { ConnectionConfig, ConnectionStatus, DatabaseSchema } from '@repo/shared/types'
+import { isValidSchema } from '@repo/shared/type-guards'
 
 // ---------------------------------------------------------------------------
 // State shape
@@ -10,11 +11,13 @@ import type { ConnectionConfig, ConnectionStatus, DatabaseSchema } from '@repo/s
 interface ConnectionState {
   status: ConnectionStatus
   schema: DatabaseSchema | null
+  connecting: boolean
 }
 
 const initialState: ConnectionState = {
   status: { connected: false },
   schema: null,
+  connecting: false,
 }
 
 // ---------------------------------------------------------------------------
@@ -22,6 +25,7 @@ const initialState: ConnectionState = {
 // ---------------------------------------------------------------------------
 
 type Action =
+  | { type: 'CONNECTING' }
   | { type: 'CONNECTED'; payload: { type: 'postgresql' | 'sqlite' } }
   | { type: 'CONNECTION_ERROR'; payload: { error: string } }
   | { type: 'SCHEMA_LOADED'; payload: { schema: DatabaseSchema } }
@@ -29,21 +33,25 @@ type Action =
 
 function reducer(state: ConnectionState, action: Action): ConnectionState {
   switch (action.type) {
+    case 'CONNECTING':
+      return { ...state, connecting: true }
     case 'CONNECTED':
       return {
         ...state,
+        connecting: false,
         status: { connected: true, type: action.payload.type },
       }
     case 'CONNECTION_ERROR':
       return {
         ...state,
+        connecting: false,
         status: { connected: false, error: action.payload.error },
         schema: null,
       }
     case 'SCHEMA_LOADED':
       return { ...state, schema: action.payload.schema }
     case 'DISCONNECTED':
-      return { status: { connected: false }, schema: null }
+      return { status: { connected: false }, schema: null, connecting: false }
     default:
       return state
   }
@@ -56,6 +64,7 @@ function reducer(state: ConnectionState, action: Action): ConnectionState {
 interface ConnectionContextValue {
   status: ConnectionStatus
   schema: DatabaseSchema | null
+  connecting: boolean
   connect: (config: ConnectionConfig) => Promise<void>
   disconnect: () => void
 }
@@ -70,6 +79,7 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
   const [state, dispatch] = useReducer(reducer, initialState)
 
   const connect = useCallback(async (config: ConnectionConfig) => {
+    dispatch({ type: 'CONNECTING' })
     try {
       const connectRes = await fetch('/api/connect', {
         method: 'POST',
@@ -93,8 +103,10 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
       try {
         const schemaRes = await fetch('/api/schema')
         if (schemaRes.ok) {
-          const schema: DatabaseSchema = await schemaRes.json()
-          dispatch({ type: 'SCHEMA_LOADED', payload: { schema } })
+          const body: unknown = await schemaRes.json()
+          if (isValidSchema(body)) {
+            dispatch({ type: 'SCHEMA_LOADED', payload: { schema: body } })
+          }
         }
       } catch {
         // Schema unavailable — connection remains established
@@ -110,7 +122,7 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
   }, [])
 
   return (
-    <ConnectionContext.Provider value={{ status: state.status, schema: state.schema, connect, disconnect }}>
+    <ConnectionContext.Provider value={{ status: state.status, schema: state.schema, connecting: state.connecting, connect, disconnect }}>
       {children}
     </ConnectionContext.Provider>
   )
