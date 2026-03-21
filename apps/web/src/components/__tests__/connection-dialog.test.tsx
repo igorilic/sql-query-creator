@@ -1,0 +1,376 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
+import React from 'react'
+import { ConnectionDialog } from '../connection-dialog'
+
+// ---------------------------------------------------------------------------
+// Mock Catalyst / Headless UI components to avoid act() warnings from
+// internal transition state that escapes React's synchronous act() boundary.
+// ---------------------------------------------------------------------------
+
+vi.mock('@ui/dialog', () => ({
+  Dialog: ({
+    children,
+    open,
+  }: {
+    children: React.ReactNode
+    open: boolean
+    onClose: () => void
+  }) => (open ? <div role="dialog">{children}</div> : null),
+  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
+  DialogBody: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogActions: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}))
+
+vi.mock('@ui/button', () => ({
+  Button: ({
+    children,
+    onClick,
+    type,
+    disabled,
+    plain,
+  }: {
+    children: React.ReactNode
+    onClick?: () => void
+    type?: string
+    disabled?: boolean
+    plain?: boolean
+  }) => (
+    <button
+      type={(type as 'button' | 'submit') ?? 'button'}
+      onClick={onClick}
+      disabled={disabled}
+      data-plain={plain ? 'true' : undefined}
+    >
+      {children}
+    </button>
+  ),
+}))
+
+vi.mock('@ui/fieldset', () => ({
+  Fieldset: ({ children }: { children: React.ReactNode }) => <fieldset>{children}</fieldset>,
+  FieldGroup: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Field: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Label: ({ children, htmlFor }: { children: React.ReactNode; htmlFor?: string }) => (
+    <label htmlFor={htmlFor}>{children}</label>
+  ),
+}))
+
+vi.mock('@ui/select', () => ({
+  Select: ({
+    children,
+    value,
+    onChange,
+    id,
+    name,
+  }: {
+    children: React.ReactNode
+    value?: string
+    onChange?: (e: React.ChangeEvent<HTMLSelectElement>) => void
+    id?: string
+    name?: string
+  }) => (
+    <select id={id} name={name} value={value} onChange={onChange}>
+      {children}
+    </select>
+  ),
+}))
+
+vi.mock('@ui/input', () => ({
+  Input: ({
+    value,
+    onChange,
+    placeholder,
+    type,
+    id,
+    name,
+    required,
+  }: {
+    value?: string
+    onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void
+    placeholder?: string
+    type?: string
+    id?: string
+    name?: string
+    required?: boolean
+  }) => (
+    <input
+      id={id}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      type={type ?? 'text'}
+      name={name}
+      required={required}
+    />
+  ),
+}))
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function renderDialog(overrides: Partial<React.ComponentProps<typeof ConnectionDialog>> = {}) {
+  const props = {
+    open: true,
+    onClose: vi.fn(),
+    onConnect: vi.fn(),
+    ...overrides,
+  }
+  return { ...render(<ConnectionDialog {...props} />), ...props }
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+describe('ConnectionDialog', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  // -------------------------------------------------------------------------
+  // Database type selector
+  // -------------------------------------------------------------------------
+  it('renders the database type selector with PostgreSQL and SQLite options', () => {
+    renderDialog()
+
+    const select = screen.getByLabelText(/database type/i)
+    expect(select).toBeInTheDocument()
+
+    const options = Array.from((select as HTMLSelectElement).options).map((o) => o.value)
+    expect(options).toContain('postgresql')
+    expect(options).toContain('sqlite')
+  })
+
+  // -------------------------------------------------------------------------
+  // PostgreSQL fields
+  // -------------------------------------------------------------------------
+  it('shows PostgreSQL host/port/database/username/password fields by default', () => {
+    renderDialog()
+
+    expect(screen.getByLabelText(/^host$/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/^port$/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/^database$/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/^username$/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument()
+  })
+
+  // -------------------------------------------------------------------------
+  // SQLite fields
+  // -------------------------------------------------------------------------
+  it('shows SQLite file path field when SQLite is selected', () => {
+    renderDialog()
+
+    fireEvent.change(screen.getByLabelText(/database type/i), { target: { value: 'sqlite' } })
+
+    expect(screen.getByLabelText(/file path/i)).toBeInTheDocument()
+    // PostgreSQL fields should be hidden
+    expect(screen.queryByLabelText(/^host$/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/^port$/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/^database$/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/^username$/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/^password$/i)).not.toBeInTheDocument()
+  })
+
+  // -------------------------------------------------------------------------
+  // Submit button disabled state
+  // -------------------------------------------------------------------------
+  it('submit button is disabled when required PostgreSQL fields are empty', () => {
+    renderDialog()
+
+    expect(screen.getByRole('button', { name: /^connect$/i })).toBeDisabled()
+  })
+
+  it('submit button is disabled when SQLite file path is empty', () => {
+    renderDialog()
+
+    fireEvent.change(screen.getByLabelText(/database type/i), { target: { value: 'sqlite' } })
+
+    expect(screen.getByRole('button', { name: /^connect$/i })).toBeDisabled()
+  })
+
+  it('submit button is enabled when all required PostgreSQL fields are filled', () => {
+    renderDialog()
+
+    fireEvent.change(screen.getByLabelText(/^host$/i), { target: { value: 'localhost' } })
+    fireEvent.change(screen.getByLabelText(/^port$/i), { target: { value: '5432' } })
+    fireEvent.change(screen.getByLabelText(/^database$/i), { target: { value: 'mydb' } })
+    fireEvent.change(screen.getByLabelText(/^username$/i), { target: { value: 'admin' } })
+
+    expect(screen.getByRole('button', { name: /^connect$/i })).not.toBeDisabled()
+  })
+
+  it('submit button is enabled when SQLite file path is filled', () => {
+    renderDialog()
+
+    fireEvent.change(screen.getByLabelText(/database type/i), { target: { value: 'sqlite' } })
+    fireEvent.change(screen.getByLabelText(/file path/i), { target: { value: '/data/mydb.sqlite' } })
+
+    expect(screen.getByRole('button', { name: /^connect$/i })).not.toBeDisabled()
+  })
+
+  // -------------------------------------------------------------------------
+  // onConnect callback — PostgreSQL
+  // -------------------------------------------------------------------------
+  it('calls onConnect with correct PostgreSQL config on submit', () => {
+    const { onConnect } = renderDialog()
+
+    fireEvent.change(screen.getByLabelText(/^host$/i), { target: { value: 'localhost' } })
+    fireEvent.change(screen.getByLabelText(/^port$/i), { target: { value: '5432' } })
+    fireEvent.change(screen.getByLabelText(/^database$/i), { target: { value: 'mydb' } })
+    fireEvent.change(screen.getByLabelText(/^username$/i), { target: { value: 'admin' } })
+    fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'secret' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /^connect$/i }))
+
+    expect(onConnect).toHaveBeenCalledOnce()
+    expect(onConnect).toHaveBeenCalledWith({
+      type: 'postgresql',
+      host: 'localhost',
+      port: 5432,
+      database: 'mydb',
+      username: 'admin',
+      password: 'secret',
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  // onConnect callback — SQLite
+  // -------------------------------------------------------------------------
+  it('calls onConnect with correct SQLite config on submit', () => {
+    const { onConnect } = renderDialog()
+
+    fireEvent.change(screen.getByLabelText(/database type/i), { target: { value: 'sqlite' } })
+    fireEvent.change(screen.getByLabelText(/file path/i), { target: { value: '/data/mydb.sqlite' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /^connect$/i }))
+
+    expect(onConnect).toHaveBeenCalledOnce()
+    expect(onConnect).toHaveBeenCalledWith({
+      type: 'sqlite',
+      filePath: '/data/mydb.sqlite',
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  // State reset on close (finding #1)
+  // -------------------------------------------------------------------------
+  it('resets all fields when the dialog is closed', () => {
+    const { onClose } = renderDialog()
+
+    // Fill in PostgreSQL fields
+    fireEvent.change(screen.getByLabelText(/^host$/i), { target: { value: 'prod-server' } })
+    fireEvent.change(screen.getByLabelText(/^database$/i), { target: { value: 'mydb' } })
+    fireEvent.change(screen.getByLabelText(/^username$/i), { target: { value: 'admin' } })
+    fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'supersecret' } })
+
+    // Close (cancel)
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }))
+    expect(onClose).toHaveBeenCalledOnce()
+
+    // Fields should be empty now
+    expect((screen.getByLabelText(/^host$/i) as HTMLInputElement).value).toBe('')
+    expect((screen.getByLabelText(/^password$/i) as HTMLInputElement).value).toBe('')
+  })
+
+  // -------------------------------------------------------------------------
+  // Port validation — NaN guard (finding #2)
+  // -------------------------------------------------------------------------
+  it('submit button is disabled when port is non-numeric', () => {
+    renderDialog()
+
+    fireEvent.change(screen.getByLabelText(/^host$/i), { target: { value: 'localhost' } })
+    fireEvent.change(screen.getByLabelText(/^port$/i), { target: { value: 'abc' } })
+    fireEvent.change(screen.getByLabelText(/^database$/i), { target: { value: 'mydb' } })
+    fireEvent.change(screen.getByLabelText(/^username$/i), { target: { value: 'admin' } })
+
+    expect(screen.getByRole('button', { name: /^connect$/i })).toBeDisabled()
+  })
+
+  it('submit button is disabled when port is out of range (> 65535)', () => {
+    renderDialog()
+
+    fireEvent.change(screen.getByLabelText(/^host$/i), { target: { value: 'localhost' } })
+    fireEvent.change(screen.getByLabelText(/^port$/i), { target: { value: '99999' } })
+    fireEvent.change(screen.getByLabelText(/^database$/i), { target: { value: 'mydb' } })
+    fireEvent.change(screen.getByLabelText(/^username$/i), { target: { value: 'admin' } })
+
+    expect(screen.getByRole('button', { name: /^connect$/i })).toBeDisabled()
+  })
+
+  it('emits numeric port in onConnect payload (never NaN)', () => {
+    const { onConnect } = renderDialog()
+
+    fireEvent.change(screen.getByLabelText(/^host$/i), { target: { value: 'localhost' } })
+    fireEvent.change(screen.getByLabelText(/^port$/i), { target: { value: '5433' } })
+    fireEvent.change(screen.getByLabelText(/^database$/i), { target: { value: 'mydb' } })
+    fireEvent.change(screen.getByLabelText(/^username$/i), { target: { value: 'admin' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /^connect$/i }))
+
+    const config = (onConnect as ReturnType<typeof vi.fn>).mock.calls[0][0]
+    expect(typeof config.port).toBe('number')
+    expect(Number.isNaN(config.port)).toBe(false)
+    expect(config.port).toBe(5433)
+  })
+
+  // -------------------------------------------------------------------------
+  // Explicit id/htmlFor accessibility (finding #3)
+  // -------------------------------------------------------------------------
+  it('inputs have explicit id attributes that match label htmlFor', () => {
+    renderDialog()
+
+    const hostInput = screen.getByLabelText(/^host$/i)
+    expect(hostInput).toHaveAttribute('id')
+
+    const portInput = screen.getByLabelText(/^port$/i)
+    expect(portInput).toHaveAttribute('id')
+
+    const dbInput = screen.getByLabelText(/^database$/i)
+    expect(dbInput).toHaveAttribute('id')
+
+    const userInput = screen.getByLabelText(/^username$/i)
+    expect(userInput).toHaveAttribute('id')
+
+    const passInput = screen.getByLabelText(/^password$/i)
+    expect(passInput).toHaveAttribute('id')
+  })
+
+  it('SQLite file path input has explicit id attribute', () => {
+    renderDialog()
+    fireEvent.change(screen.getByLabelText(/database type/i), { target: { value: 'sqlite' } })
+
+    const fileInput = screen.getByLabelText(/file path/i)
+    expect(fileInput).toHaveAttribute('id')
+  })
+
+  // -------------------------------------------------------------------------
+  // Dialog closes after successful submit (finding #4)
+  // -------------------------------------------------------------------------
+  it('calls onClose after successful PostgreSQL submit', () => {
+    const { onConnect, onClose } = renderDialog()
+
+    fireEvent.change(screen.getByLabelText(/^host$/i), { target: { value: 'localhost' } })
+    fireEvent.change(screen.getByLabelText(/^port$/i), { target: { value: '5432' } })
+    fireEvent.change(screen.getByLabelText(/^database$/i), { target: { value: 'mydb' } })
+    fireEvent.change(screen.getByLabelText(/^username$/i), { target: { value: 'admin' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /^connect$/i }))
+
+    expect(onConnect).toHaveBeenCalledOnce()
+    expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it('calls onClose after successful SQLite submit', () => {
+    const { onConnect, onClose } = renderDialog()
+
+    fireEvent.change(screen.getByLabelText(/database type/i), { target: { value: 'sqlite' } })
+    fireEvent.change(screen.getByLabelText(/file path/i), { target: { value: '/data/db.sqlite' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /^connect$/i }))
+
+    expect(onConnect).toHaveBeenCalledOnce()
+    expect(onClose).toHaveBeenCalledOnce()
+  })
+})

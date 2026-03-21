@@ -1,0 +1,18 @@
+# TDD gate bypass (never commit)
+.tdd-skip
+
+# Dependencies
+node_modules/
+
+# Build output
+.next/
+dist/
+build/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
