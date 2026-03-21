@@ -29,12 +29,13 @@ const mockSchema = {
 // ---------------------------------------------------------------------------
 
 function TestConsumer() {
-  const { status, schema, connect, disconnect } = useConnection()
+  const { status, schema, connecting, connect, disconnect } = useConnection()
   return (
     <div>
       <span data-testid="connected">{String(status.connected)}</span>
       <span data-testid="type">{status.type ?? 'none'}</span>
       <span data-testid="error">{status.error ?? ''}</span>
+      <span data-testid="connecting">{String(connecting)}</span>
       <span data-testid="schema-tables">{schema ? String(schema.tables.length) : 'null'}</span>
       <button
         data-testid="connect-btn"
@@ -211,5 +212,83 @@ describe('ConnectionContext', () => {
     expect(() => render(<TestConsumer />)).toThrow()
 
     spy.mockRestore()
+  })
+
+  // -------------------------------------------------------------------------
+  // Loading / connecting state (Issue 1)
+  // -------------------------------------------------------------------------
+  it('exposes connecting=true while connect() is in-flight, then false after resolve', async () => {
+    let resolveConnect!: (value: Response) => void
+    const connectPromise = new Promise<Response>((res) => {
+      resolveConnect = res
+    })
+
+    vi.spyOn(globalThis, 'fetch').mockReturnValueOnce(connectPromise)
+
+    render(<TestConsumer />, { wrapper: Wrapper })
+
+    // Start connect — do NOT await
+    act(() => {
+      screen.getByTestId('connect-btn').click()
+    })
+
+    // Should be connecting
+    await waitFor(() => {
+      expect(screen.getByTestId('connecting').textContent).toBe('true')
+    })
+
+    // Resolve the fetch
+    await act(async () => {
+      resolveConnect(new Response(JSON.stringify({ status: 'connected', type: 'postgresql' }), { status: 200 }))
+    })
+
+    // Connecting flag should clear
+    await waitFor(() => {
+      expect(screen.getByTestId('connecting').textContent).toBe('false')
+    })
+  })
+
+  it('exposes connecting=false after connect() resolves with an error', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({ status: 'error', error: 'refused' }), { status: 502 }),
+    )
+
+    render(<TestConsumer />, { wrapper: Wrapper })
+
+    await act(async () => {
+      screen.getByTestId('connect-btn').click()
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('connecting').textContent).toBe('false')
+    })
+    expect(screen.getByTestId('error').textContent).toBe('refused')
+  })
+
+  // -------------------------------------------------------------------------
+  // Schema validation (Issue 3)
+  // -------------------------------------------------------------------------
+  it('does not dispatch SCHEMA_LOADED when /api/schema returns a malformed body', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ status: 'connected', type: 'postgresql' }), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        // Missing required `dialect` field → isValidSchema returns false
+        new Response(JSON.stringify({ tables: [] }), { status: 200 }),
+      )
+
+    render(<TestConsumer />, { wrapper: Wrapper })
+
+    await act(async () => {
+      screen.getByTestId('connect-btn').click()
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('connected').textContent).toBe('true')
+    })
+
+    // Schema should stay null because body failed validation
+    expect(screen.getByTestId('schema-tables').textContent).toBe('null')
   })
 })
