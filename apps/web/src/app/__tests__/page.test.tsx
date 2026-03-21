@@ -93,8 +93,7 @@ const mockSchema: DatabaseSchema = {
   tables: [
     {
       name: 'users',
-      columns: [{ name: 'id', type: 'integer', nullable: false, isPrimaryKey: true }],
-      foreignKeys: [],
+      columns: [{ name: 'id', dataType: 'integer', nullable: false, isPrimaryKey: true }],
     },
   ],
 }

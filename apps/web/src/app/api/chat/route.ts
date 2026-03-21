@@ -41,7 +41,8 @@ export async function POST(request: Request): Promise<Response> {
 
   // 2. Resolve schema from the active connection (if any)
   const status = connectionManager.getStatus()
-  const dialect = status.connected ? status.type : 'postgresql'
+  const dialect: 'postgresql' | 'sqlite' =
+    status.connected && status.type ? status.type : 'postgresql'
 
   let schema: DatabaseSchema | null = null
   if (status.connected) {

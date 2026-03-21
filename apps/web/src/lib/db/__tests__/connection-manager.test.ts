@@ -230,7 +230,7 @@ describe('ConnectionManager', () => {
       vi.mocked(connectPostgres).mockResolvedValueOnce({ disconnect: vi.fn(), introspect: vi.fn() })
       await manager.connect(pgConfig)
 
-      const snapshot = manager.getStatus() as Record<string, unknown>
+      const snapshot = manager.getStatus() as unknown as Record<string, unknown>
       snapshot.connected = false // caller mutates returned value
 
       // Internal state must be unaffected
@@ -240,7 +240,7 @@ describe('ConnectionManager', () => {
     it('connect() returns a snapshot: mutating the result does not corrupt internal state', async () => {
       vi.mocked(connectPostgres).mockResolvedValueOnce({ disconnect: vi.fn(), introspect: vi.fn() })
 
-      const result = (await manager.connect(pgConfig)) as Record<string, unknown>
+      const result = (await manager.connect(pgConfig)) as unknown as Record<string, unknown>
       result.connected = false // caller mutates returned value
 
       // Internal state must be unaffected
