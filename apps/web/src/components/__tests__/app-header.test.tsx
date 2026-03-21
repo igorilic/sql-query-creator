@@ -5,6 +5,29 @@ import { AppHeader } from '../app-header'
 import type { ConnectionStatus } from '@repo/shared/types'
 
 // ---------------------------------------------------------------------------
+// Mocks — Catalyst Navbar/Badge components use motion and browser APIs
+// not available in the happy-dom test environment.
+// ---------------------------------------------------------------------------
+
+vi.mock('@ui/navbar', () => ({
+  Navbar: ({ children }: { children: React.ReactNode }) => <nav>{children}</nav>,
+  NavbarSection: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  NavbarItem: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  NavbarLabel: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  NavbarSpacer: () => <div aria-hidden="true" />,
+}))
+
+vi.mock('@ui/badge', () => ({
+  Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+}))
+
+vi.mock('@ui/button', () => ({
+  Button: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => (
+    <button type="button" onClick={onClick}>{children}</button>
+  ),
+}))
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
