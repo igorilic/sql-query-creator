@@ -74,7 +74,6 @@ export function ConnectionDialog({ open, onClose, onConnect }: ConnectionDialogP
     } else {
       onConnect({ type: 'sqlite', filePath })
     }
-    onClose()
   }
 
   return (

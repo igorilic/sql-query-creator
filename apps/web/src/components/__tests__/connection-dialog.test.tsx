@@ -348,7 +348,7 @@ describe('ConnectionDialog', () => {
   // -------------------------------------------------------------------------
   // Dialog closes after successful submit (finding #4)
   // -------------------------------------------------------------------------
-  it('calls onClose after successful PostgreSQL submit', () => {
+  it('does not call onClose on submit — parent controls dialog lifecycle', () => {
     const { onConnect, onClose } = renderDialog()
 
     fireEvent.change(screen.getByLabelText(/^host$/i), { target: { value: 'localhost' } })
@@ -359,18 +359,6 @@ describe('ConnectionDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: /^connect$/i }))
 
     expect(onConnect).toHaveBeenCalledOnce()
-    expect(onClose).toHaveBeenCalledOnce()
-  })
-
-  it('calls onClose after successful SQLite submit', () => {
-    const { onConnect, onClose } = renderDialog()
-
-    fireEvent.change(screen.getByLabelText(/database type/i), { target: { value: 'sqlite' } })
-    fireEvent.change(screen.getByLabelText(/file path/i), { target: { value: '/data/db.sqlite' } })
-
-    fireEvent.click(screen.getByRole('button', { name: /^connect$/i }))
-
-    expect(onConnect).toHaveBeenCalledOnce()
-    expect(onClose).toHaveBeenCalledOnce()
+    expect(onClose).not.toHaveBeenCalled()
   })
 })
