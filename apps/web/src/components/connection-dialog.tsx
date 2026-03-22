@@ -219,10 +219,10 @@ export function ConnectionDialog({ open, onClose, onConnect }: ConnectionDialogP
           </fieldset>
 
           <div className="mt-8 flex justify-end gap-3">
-            <Button plain type="button" onClick={handleClose}>
+            <Button outline type="button" onClick={handleClose} className="px-5 py-2">
               Cancel
             </Button>
-            <Button type="submit" disabled={!isValid}>
+            <Button type="submit" disabled={!isValid} color="dark/zinc" className="px-5 py-2">
               Connect
             </Button>
           </div>
