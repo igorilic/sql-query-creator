@@ -89,9 +89,13 @@ export class ConnectionManager {
 }
 
 /**
- * Module-level singleton.
- *
- * Import this instance (not the class) in API routes and server-side code so
- * all callers share the same active connection state.
+ * Module-level singleton, attached to globalThis to survive Next.js
+ * hot-module reloading in development. Without this, each HMR cycle
+ * creates a new ConnectionManager and the connection state is lost.
  */
-export const connectionManager = new ConnectionManager()
+const globalForDb = globalThis as typeof globalThis & {
+  __connectionManager?: ConnectionManager
+}
+
+export const connectionManager =
+  globalForDb.__connectionManager ??= new ConnectionManager()
