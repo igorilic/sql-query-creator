@@ -209,4 +209,27 @@ describe('QueryEditor', () => {
     const editor = screen.getByTestId('codemirror-editor') as HTMLTextAreaElement
     expect(editor.placeholder).toBeTruthy()
   })
+
+  // -------------------------------------------------------------------------
+  // Dark mode classes
+  // -------------------------------------------------------------------------
+  describe('dark mode classes', () => {
+    it('toolbar has dark:border-zinc-700', () => {
+      renderEditor()
+      const toolbar = screen.getByRole('toolbar')
+      expect(toolbar.className).toContain('dark:border-zinc-700')
+    })
+
+    it('error alert has dark:text-red-400', async () => {
+      writeTextMock.mockRejectedValue(new Error('Permission denied'))
+      renderEditor()
+
+      fireEvent.click(screen.getByRole('button', { name: /copy/i }))
+
+      await waitFor(() => {
+        const alert = screen.getByRole('alert')
+        expect(alert.className).toContain('dark:text-red-400')
+      })
+    })
+  })
 })

@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useState } from 'react'
+import { Input } from '@ui/input'
+import { Button } from '@ui/button'
 import type { ChatMessage } from '@repo/shared/types'
 
 // ---------------------------------------------------------------------------
@@ -32,7 +34,7 @@ export function ChatPanel({ messages, loading, onSend }: ChatPanelProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Message list */}
-      <div className="flex-1 overflow-y-auto space-y-2 p-4">
+      <div className="flex-1 overflow-y-auto space-y-2 p-4 dark:text-zinc-300">
         {messages.map((msg) => (
           <article key={msg.id} data-role={msg.role}>
             <p>{msg.content}</p>
@@ -49,18 +51,18 @@ export function ChatPanel({ messages, loading, onSend }: ChatPanelProps) {
       </div>
 
       {/* Input form */}
-      <form onSubmit={handleSubmit} className="flex gap-2 p-4 border-t">
-        <input
+      <form onSubmit={handleSubmit} className="flex gap-2 p-4 border-t border-zinc-200 dark:border-zinc-700">
+        <Input
           type="text"
           aria-label="Chat message"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          className="flex-1 border rounded px-2 py-1"
+          className="flex-1"
           placeholder="Ask a question…"
         />
-        <button type="submit" disabled={!canSubmit}>
+        <Button type="submit" disabled={!canSubmit}>
           Send
-        </button>
+        </Button>
       </form>
     </div>
   )

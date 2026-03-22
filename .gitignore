@@ -14,5 +14,8 @@ build/
 .env.local
 .env.*.local
 
+# Pipeline artifacts
+.context/
+
 # OS
 .DS_Store
