@@ -23,6 +23,7 @@ interface ConnectionDialogProps {
 // ---------------------------------------------------------------------------
 
 export function ConnectionDialog({ open, onClose, onConnect }: ConnectionDialogProps) {
+  console.log('[ConnectionDialog] rendered, open:', open)
   const [dbType, setDbType] = useState<'postgresql' | 'sqlite'>('postgresql')
 
   // PostgreSQL fields

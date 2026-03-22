@@ -37,6 +37,13 @@ function statusColor(status: ConnectionStatus): 'green' | 'red' | 'zinc' {
 // ---------------------------------------------------------------------------
 
 export function AppHeader({ status, onConnectClick }: AppHeaderProps) {
+  console.log('[AppHeader] rendered, onConnectClick is:', typeof onConnectClick)
+
+  function handleConnectClick() {
+    console.log('[AppHeader] Connect button clicked!')
+    onConnectClick()
+  }
+
   return (
     <Navbar>
       <NavbarSection>
@@ -52,7 +59,7 @@ export function AppHeader({ status, onConnectClick }: AppHeaderProps) {
           <Badge color={statusColor(status)}>{statusLabel(status)}</Badge>
         </div>
         <div className="flex items-center">
-          <Button onClick={onConnectClick} color="dark/zinc" className="px-5 py-2">Connect</Button>
+          <Button onClick={handleConnectClick} color="dark/zinc" className="px-5 py-2">Connect</Button>
         </div>
       </NavbarSection>
     </Navbar>
