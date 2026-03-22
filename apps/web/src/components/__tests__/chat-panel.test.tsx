@@ -6,6 +6,10 @@ import React from 'react'
 // Mocks — Catalyst components use browser APIs unavailable in jsdom.
 // ---------------------------------------------------------------------------
 
+vi.mock('react-markdown', () => ({
+  default: ({ children }: { children: string }) => <div data-testid="markdown">{children}</div>,
+}))
+
 vi.mock('@ui/input', () => ({
   Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => (
     <input {...props} />
@@ -268,7 +272,8 @@ describe('ChatPanel', () => {
 
     it('message area has dark:text-zinc-300', () => {
       renderPanel({ messages: [userMessage] })
-      const msgArea = screen.getByText('Show me all users').closest('div[class*="overflow"]')!
+      const article = screen.getByText('Show me all users').closest('article')!
+      const msgArea = article.parentElement!
       expect(msgArea.className).toContain('dark:text-zinc-300')
     })
   })
@@ -279,9 +284,10 @@ describe('ChatPanel', () => {
   describe('message spacing and styling', () => {
     it('message list has space-y-4 and p-6 for adequate spacing', () => {
       renderPanel({ messages: [userMessage] })
-      const msgArea = screen.getByText('Show me all users').closest('div[class*="overflow"]')!
-      expect(msgArea.className).toContain('space-y-4')
-      expect(msgArea.className).toContain('p-6')
+      const article = screen.getByText('Show me all users').closest('article')!
+      const msgList = article.parentElement!
+      expect(msgList.className).toContain('space-y-4')
+      expect(msgList.className).toContain('p-6')
     })
 
     it('user message has rounded background styling', () => {
