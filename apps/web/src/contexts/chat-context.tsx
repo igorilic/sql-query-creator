@@ -18,12 +18,14 @@ interface ChatState {
   messages: ChatMessage[]
   loading: boolean
   currentSql: string | null
+  schemaContext: SchemaMeta | null
 }
 
 const initialState: ChatState = {
   messages: [],
   loading: false,
   currentSql: null,
+  schemaContext: null,
 }
 
 // ---------------------------------------------------------------------------
@@ -36,6 +38,7 @@ type Action =
   | { type: 'STREAM_TOKEN'; payload: { id: string; token: string } }
   | { type: 'STREAM_DONE'; payload: { id: string; sql: string | null } }
   | { type: 'STREAM_ERROR'; payload: { id: string } }
+  | { type: 'SCHEMA_META'; payload: SchemaMeta }
   | { type: 'CLEAR_CHAT' }
 
 function reducer(state: ChatState, action: Action): ChatState {
@@ -77,6 +80,9 @@ function reducer(state: ChatState, action: Action): ChatState {
         messages: state.messages.filter((m) => m.id !== action.payload.id),
       }
     }
+    case 'SCHEMA_META': {
+      return { ...state, schemaContext: action.payload }
+    }
     case 'CLEAR_CHAT': {
       return initialState
     }
@@ -89,9 +95,15 @@ function reducer(state: ChatState, action: Action): ChatState {
 // SSE parser
 // ---------------------------------------------------------------------------
 
+export interface SchemaMeta {
+  schemaAvailable: boolean
+  tableCount: number
+  schemaError?: string
+}
+
 async function* parseSSEEvents(
   body: ReadableStream<Uint8Array>,
-): AsyncGenerator<{ token?: string; error?: string }> {
+): AsyncGenerator<{ token?: string; error?: string; meta?: SchemaMeta }> {
   const reader = body.getReader()
   const decoder = new TextDecoder()
   let buffer = ''
@@ -114,7 +126,9 @@ async function* parseSSEEvents(
           if (data === '[DONE]') return
           try {
             const parsed = JSON.parse(data) as Record<string, unknown>
-            if (currentEventType === 'error') {
+            if (currentEventType === 'meta') {
+              yield { meta: parsed as unknown as SchemaMeta }
+            } else if (currentEventType === 'error') {
               yield { error: typeof parsed.error === 'string' ? parsed.error : 'Unknown error' }
               return
             } else if (typeof parsed.token === 'string') {
@@ -142,6 +156,7 @@ interface ChatContextValue {
   messages: ChatMessage[]
   loading: boolean
   currentSql: string | null
+  schemaContext: SchemaMeta | null
   sendMessage: (text: string) => Promise<void>
   clearChat: () => void
 }
@@ -203,7 +218,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       let fullContent = ''
       for await (const event of parseSSEEvents(res.body)) {
-        if (event.token !== undefined) {
+        if (event.meta !== undefined) {
+          dispatch({ type: 'SCHEMA_META', payload: event.meta })
+        } else if (event.token !== undefined) {
           fullContent += event.token
           dispatch({ type: 'STREAM_TOKEN', payload: { id: assistantId, token: event.token } })
         } else if (event.error !== undefined) {
@@ -230,6 +247,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         messages: state.messages,
         loading: state.loading,
         currentSql: state.currentSql,
+        schemaContext: state.schemaContext,
         sendMessage,
         clearChat,
       }}

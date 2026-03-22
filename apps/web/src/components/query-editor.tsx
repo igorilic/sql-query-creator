@@ -41,7 +41,7 @@ export function QueryEditor({
       <div
         role="toolbar"
         aria-label="Editor actions"
-        className="flex items-center justify-end gap-2 p-2 border-b border-zinc-200 dark:border-zinc-700"
+        className="flex items-center justify-end gap-3 px-4 py-3 border-b border-zinc-200 dark:border-zinc-700"
       >
         {copyError && (
           <span role="alert" className="text-sm text-red-600 dark:text-red-400">
@@ -53,6 +53,7 @@ export function QueryEditor({
           outline
           onClick={handleCopy}
           aria-label="Copy SQL"
+          className="px-5 py-2"
         >
           Copy
         </Button>

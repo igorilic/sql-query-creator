@@ -10,12 +10,6 @@ vi.mock('react-markdown', () => ({
   default: ({ children }: { children: string }) => <div data-testid="markdown">{children}</div>,
 }))
 
-vi.mock('@ui/input', () => ({
-  Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => (
-    <input {...props} />
-  ),
-}))
-
 vi.mock('@ui/button', () => ({
   Button: ({
     children,
@@ -25,8 +19,15 @@ vi.mock('@ui/button', () => ({
   ),
 }))
 
+vi.mock('@ui/badge', () => ({
+  Badge: ({ children }: { children: React.ReactNode; color?: string }) => (
+    <span data-testid="badge">{children}</span>
+  ),
+}))
+
 import { ChatPanel } from '../chat-panel'
 import type { ChatMessage } from '@repo/shared/types'
+import type { SchemaMeta } from '../../contexts/chat-context'
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -58,7 +59,7 @@ const assistantMessageNoSql: ChatMessage = {
 // Helper
 // ---------------------------------------------------------------------------
 
-function renderPanel(overrides: Partial<React.ComponentProps<typeof ChatPanel>> = {}) {
+function renderPanel(overrides: Partial<React.ComponentProps<typeof ChatPanel>> & { schemaContext?: SchemaMeta | null } = {}) {
   const props = {
     messages: [] as ChatMessage[],
     loading: false,
@@ -264,10 +265,10 @@ describe('ChatPanel', () => {
   // Dark mode classes
   // -------------------------------------------------------------------------
   describe('dark mode classes', () => {
-    it('form container has dark:border-zinc-700', () => {
+    it('form container has dark:ring-zinc-700', () => {
       renderPanel()
       const form = screen.getByRole('textbox', { name: /chat message/i }).closest('form')!
-      expect(form.className).toContain('dark:border-zinc-700')
+      expect(form.className).toContain('dark:ring-zinc-700')
     })
 
     it('message area has dark:text-zinc-300', () => {
@@ -323,6 +324,46 @@ describe('ChatPanel', () => {
       renderPanel({ messages: [assistantMessage] })
       const code = screen.getByTestId('sql-block')
       expect(code.className).toContain('font-mono')
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  // Schema context indicator
+  // -------------------------------------------------------------------------
+  describe('schema context indicator', () => {
+    it('does not show indicator when schemaContext is null', () => {
+      renderPanel({ schemaContext: null })
+      expect(screen.queryByTestId('schema-indicator')).not.toBeInTheDocument()
+    })
+
+    it('does not show indicator when schemaContext is undefined', () => {
+      renderPanel()
+      expect(screen.queryByTestId('schema-indicator')).not.toBeInTheDocument()
+    })
+
+    it('shows "Schema loaded" with table count when schema is available', () => {
+      const meta: SchemaMeta = { schemaAvailable: true, tableCount: 5 }
+      renderPanel({ schemaContext: meta })
+      expect(screen.getByTestId('schema-indicator')).toBeInTheDocument()
+      expect(screen.getByText(/schema loaded: 5 tables/i)).toBeInTheDocument()
+    })
+
+    it('shows singular "table" for 1 table', () => {
+      const meta: SchemaMeta = { schemaAvailable: true, tableCount: 1 }
+      renderPanel({ schemaContext: meta })
+      expect(screen.getByText(/schema loaded: 1 table$/i)).toBeInTheDocument()
+    })
+
+    it('shows warning when schema is not available', () => {
+      const meta: SchemaMeta = { schemaAvailable: false, tableCount: 0 }
+      renderPanel({ schemaContext: meta })
+      expect(screen.getByText(/no schema available/i)).toBeInTheDocument()
+    })
+
+    it('shows schema error message when provided', () => {
+      const meta: SchemaMeta = { schemaAvailable: false, tableCount: 0, schemaError: 'Connection timed out' }
+      renderPanel({ schemaContext: meta })
+      expect(screen.getByText('Connection timed out')).toBeInTheDocument()
     })
   })
 })

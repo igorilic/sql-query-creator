@@ -48,11 +48,11 @@ export function AppHeader({ status, onConnectClick }: AppHeaderProps) {
       <NavbarSpacer />
 
       <NavbarSection>
-        <NavbarItem>
-          <Badge color={statusColor(status)}>{statusLabel(status)}</Badge>
-        </NavbarItem>
         <div className="flex items-center">
-          <Button onClick={onConnectClick}>Connect</Button>
+          <Badge color={statusColor(status)}>{statusLabel(status)}</Badge>
+        </div>
+        <div className="flex items-center">
+          <Button onClick={onConnectClick} color="dark/zinc" className="px-5 py-2">Connect</Button>
         </div>
       </NavbarSection>
     </Navbar>

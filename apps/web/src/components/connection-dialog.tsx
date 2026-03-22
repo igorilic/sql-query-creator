@@ -1,10 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
-import { Dialog, DialogTitle, DialogBody, DialogActions } from '@ui/dialog'
-import { Fieldset, FieldGroup, Field, Label } from '@ui/fieldset'
-import { Select } from '@ui/select'
-import { Input } from '@ui/input'
+import React, { useState, useEffect, useRef } from 'react'
 import { Button } from '@ui/button'
 import type { ConnectionConfig } from '@repo/shared/types'
 
@@ -24,6 +20,7 @@ interface ConnectionDialogProps {
 
 export function ConnectionDialog({ open, onClose, onConnect }: ConnectionDialogProps) {
   const [dbType, setDbType] = useState<'postgresql' | 'sqlite'>('postgresql')
+  const dialogRef = useRef<HTMLDivElement>(null)
 
   // PostgreSQL fields
   const [host, setHost] = useState('')
@@ -74,102 +71,163 @@ export function ConnectionDialog({ open, onClose, onConnect }: ConnectionDialogP
     } else {
       onConnect({ type: 'sqlite', filePath })
     }
-    onClose()
   }
 
+  // Close on Escape key
+  useEffect(() => {
+    if (!open) return
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') handleClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  })
+
+  // Close on backdrop click
+  function handleBackdropClick(e: React.MouseEvent) {
+    if (e.target === e.currentTarget) handleClose()
+  }
+
+  if (!open) return null
+
   return (
-    <Dialog open={open} onClose={handleClose}>
-      <DialogTitle>Connect to Database</DialogTitle>
-      <form onSubmit={handleSubmit}>
-        <DialogBody>
-          <Fieldset>
-            <FieldGroup>
-              <Field>
-                <Label htmlFor="db-type">Database type</Label>
-                <Select
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="connection-dialog-title"
+      className="fixed inset-0 z-[100] flex items-center justify-center"
+      data-testid="connection-dialog"
+    >
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-zinc-950/25 dark:bg-zinc-950/50"
+        onClick={handleBackdropClick}
+        aria-hidden="true"
+      />
+
+      {/* Panel */}
+      <div
+        ref={dialogRef}
+        className="relative z-10 w-full max-w-lg mx-4 rounded-2xl bg-white dark:bg-zinc-900 p-8 shadow-lg ring-1 ring-zinc-950/10 dark:ring-white/10"
+      >
+        <h2
+          id="connection-dialog-title"
+          className="text-lg font-semibold text-zinc-950 dark:text-white"
+        >
+          Connect to Database
+        </h2>
+
+        <form onSubmit={handleSubmit} className="mt-6">
+          <fieldset>
+            <div className="space-y-4">
+              {/* Database type */}
+              <div>
+                <label htmlFor="db-type" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  Database type
+                </label>
+                <select
                   id="db-type"
                   value={dbType}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                    setDbType(e.target.value as 'postgresql' | 'sqlite')
-                  }
+                  onChange={(e) => setDbType(e.target.value as 'postgresql' | 'sqlite')}
+                  className="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="postgresql">PostgreSQL</option>
                   <option value="sqlite">SQLite</option>
-                </Select>
-              </Field>
+                </select>
+              </div>
 
               {dbType === 'postgresql' && (
                 <>
-                  <Field>
-                    <Label htmlFor="pg-host">Host</Label>
-                    <Input
+                  <div>
+                    <label htmlFor="pg-host" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                      Host
+                    </label>
+                    <input
                       id="pg-host"
                       value={host}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setHost(e.target.value)}
+                      onChange={(e) => setHost(e.target.value)}
                       placeholder="localhost"
+                      className="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-950 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                  </Field>
-                  <Field>
-                    <Label htmlFor="pg-port">Port</Label>
-                    <Input
+                  </div>
+                  <div>
+                    <label htmlFor="pg-port" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                      Port
+                    </label>
+                    <input
                       id="pg-port"
                       type="number"
                       value={port}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPort(e.target.value)}
+                      onChange={(e) => setPort(e.target.value)}
                       placeholder="5432"
+                      className="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-950 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                  </Field>
-                  <Field>
-                    <Label htmlFor="pg-database">Database</Label>
-                    <Input
+                  </div>
+                  <div>
+                    <label htmlFor="pg-database" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                      Database
+                    </label>
+                    <input
                       id="pg-database"
                       value={database}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDatabase(e.target.value)}
+                      onChange={(e) => setDatabase(e.target.value)}
+                      className="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                  </Field>
-                  <Field>
-                    <Label htmlFor="pg-username">Username</Label>
-                    <Input
+                  </div>
+                  <div>
+                    <label htmlFor="pg-username" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                      Username
+                    </label>
+                    <input
                       id="pg-username"
                       value={username}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                  </Field>
-                  <Field>
-                    <Label htmlFor="pg-password">Password</Label>
-                    <Input
+                  </div>
+                  <div>
+                    <label htmlFor="pg-password" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                      Password
+                    </label>
+                    <input
                       id="pg-password"
                       type="password"
+                      autoComplete="current-password"
                       value={password}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                  </Field>
+                  </div>
                 </>
               )}
 
               {dbType === 'sqlite' && (
-                <Field>
-                  <Label htmlFor="sqlite-path">File path</Label>
-                  <Input
+                <div>
+                  <label htmlFor="sqlite-path" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    File path
+                  </label>
+                  <input
                     id="sqlite-path"
                     value={filePath}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilePath(e.target.value)}
+                    onChange={(e) => setFilePath(e.target.value)}
                     placeholder="/path/to/database.db"
+                    className="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-950 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                </Field>
+                </div>
               )}
-            </FieldGroup>
-          </Fieldset>
-        </DialogBody>
-        <DialogActions>
-          <Button plain type="button" onClick={handleClose}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={!isValid}>
-            Connect
-          </Button>
-        </DialogActions>
-      </form>
-    </Dialog>
+            </div>
+          </fieldset>
+
+          <div className="mt-8 flex justify-end gap-3">
+            <Button outline type="button" onClick={handleClose} className="px-5 py-2">
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!isValid} color="dark/zinc" className="px-5 py-2">
+              Connect
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
   )
 }

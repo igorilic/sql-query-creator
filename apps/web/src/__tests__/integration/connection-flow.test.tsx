@@ -444,7 +444,7 @@ describe('Integration: database connection and schema browsing flow', () => {
     renderApp()
 
     // Initial state: not connected
-    expect(screen.getByTestId('status-badge')).toHaveTextContent('Not connected')
+    expect(within(screen.getByTestId('layout-navbar')).getByTestId('status-badge')).toHaveTextContent('Not connected')
 
     // Open dialog
     fireEvent.click(screen.getByRole('button', { name: /^connect$/i }))
@@ -458,7 +458,7 @@ describe('Integration: database connection and schema browsing flow', () => {
     await submitDialog()
 
     await waitFor(() => {
-      expect(screen.getByTestId('status-badge')).toHaveTextContent('Connected — PostgreSQL')
+      expect(within(screen.getByTestId('layout-navbar')).getByTestId('status-badge')).toHaveTextContent('Connected — PostgreSQL')
     })
   })
 
@@ -565,7 +565,7 @@ describe('Integration: database connection and schema browsing flow', () => {
     await submitDialog()
 
     await waitFor(() => {
-      expect(screen.getByTestId('status-badge')).toHaveTextContent('Connected — PostgreSQL')
+      expect(within(screen.getByTestId('layout-navbar')).getByTestId('status-badge')).toHaveTextContent('Connected — PostgreSQL')
       expect(screen.getByText('users')).toBeInTheDocument()
     })
 
@@ -592,7 +592,7 @@ describe('Integration: database connection and schema browsing flow', () => {
 
     // Header now shows SQLite
     await waitFor(() => {
-      expect(screen.getByTestId('status-badge')).toHaveTextContent('Connected — SQLite')
+      expect(within(screen.getByTestId('layout-navbar')).getByTestId('status-badge')).toHaveTextContent('Connected — SQLite')
     })
 
     // Schema browser now shows SQLite tables; PG tables gone — all in one waitFor

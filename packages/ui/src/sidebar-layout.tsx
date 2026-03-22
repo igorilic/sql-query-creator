@@ -52,31 +52,39 @@ export function SidebarLayout({
   let [showSidebar, setShowSidebar] = useState(false)
 
   return (
-    <div className="relative isolate flex min-h-svh w-full bg-white max-lg:flex-col lg:bg-zinc-100 dark:bg-zinc-900 dark:lg:bg-zinc-950">
-      {/* Sidebar on desktop */}
-      <div className="fixed inset-y-0 left-0 w-64 max-lg:hidden">{sidebar}</div>
+    <div className="flex h-screen flex-col bg-white dark:bg-zinc-900 lg:bg-zinc-100 dark:lg:bg-zinc-950">
+      {/* Top navbar — full width */}
+      <header className="shrink-0 border-b border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 py-2">
+        <div className="flex items-center gap-2">
+          {/* Hamburger on mobile */}
+          <div className="lg:hidden">
+            <NavbarItem onClick={() => setShowSidebar(true)} aria-label="Open navigation">
+              <OpenMenuIcon />
+            </NavbarItem>
+          </div>
+          <div className="flex-1">{navbar}</div>
+        </div>
+      </header>
 
       {/* Sidebar on mobile */}
       <MobileSidebar open={showSidebar} close={() => setShowSidebar(false)}>
         {sidebar}
       </MobileSidebar>
 
-      {/* Navbar on mobile */}
-      <header className="flex items-center px-4 lg:hidden">
-        <div className="py-2.5">
-          <NavbarItem onClick={() => setShowSidebar(true)} aria-label="Open navigation">
-            <OpenMenuIcon />
-          </NavbarItem>
-        </div>
-        <div className="min-w-0 flex-1">{navbar}</div>
-      </header>
+      {/* Below navbar: sidebar + content side by side */}
+      <div className="flex flex-1 min-h-0">
+        {/* Sidebar on desktop */}
+        <aside className="max-lg:hidden w-64 shrink-0 flex flex-col border-r border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 overflow-y-auto">
+          {sidebar}
+        </aside>
 
-      {/* Content */}
-      <main className="flex flex-1 flex-col pb-2 lg:min-w-0 lg:pt-2 lg:pr-2 lg:pl-64">
-        <div className="grow p-6 lg:rounded-lg lg:bg-white lg:p-10 lg:shadow-xs lg:ring-1 lg:ring-zinc-950/5 dark:lg:bg-zinc-900 dark:lg:ring-white/10">
-          <div className="mx-auto max-w-6xl">{children}</div>
-        </div>
-      </main>
+        {/* Content */}
+        <main className="flex flex-1 flex-col min-w-0 min-h-0">
+          <div className="flex flex-1 flex-col min-h-0 lg:m-2 lg:rounded-lg lg:bg-white lg:shadow-xs lg:ring-1 lg:ring-zinc-950/5 dark:lg:bg-zinc-900 dark:lg:ring-white/10 overflow-hidden">
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   )
 }

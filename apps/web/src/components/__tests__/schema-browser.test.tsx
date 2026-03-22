@@ -9,9 +9,15 @@ import type { DatabaseSchema } from '@repo/shared/types'
 // in the jsdom test environment.
 // ---------------------------------------------------------------------------
 
+vi.mock('@ui/badge', () => ({
+  Badge: ({ children }: { children: React.ReactNode; color?: string }) => (
+    <span data-testid="badge">{children}</span>
+  ),
+}))
+
 vi.mock('@ui/sidebar', () => ({
   SidebarSection: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  SidebarHeading: ({ children }: { children: React.ReactNode }) => <h3>{children}</h3>,
+  SidebarHeading: ({ children, className }: { children: React.ReactNode; className?: string }) => <h3 className={className}>{children}</h3>,
   SidebarItem: ({ children, onClick, 'aria-expanded': ariaExpanded, 'aria-controls': ariaControls }: {
     children: React.ReactNode
     onClick?: () => void
@@ -27,7 +33,7 @@ vi.mock('@ui/sidebar', () => ({
       {children}
     </button>
   ),
-  SidebarLabel: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  SidebarLabel: ({ children, className }: { children: React.ReactNode; className?: string }) => <span className={className}>{children}</span>,
 }))
 
 vi.mock('@headlessui/react', () => {
@@ -302,6 +308,51 @@ describe('SchemaBrowser', () => {
       const fkBadge = screen.getByText('FK')
       expect(fkBadge.className).toContain('dark:bg-amber-900/50')
       expect(fkBadge.className).toContain('dark:text-amber-400')
+    })
+
+    it('column panel has dark border and background', () => {
+      render(<SchemaBrowser schema={mockSchema} />)
+      fireEvent.click(screen.getByText('users'))
+      const panel = screen.getByText('email').closest('div[class*="rounded-lg"]')!
+      expect(panel.className).toContain('dark:border-zinc-700')
+      expect(panel.className).toContain('dark:bg-zinc-800/50')
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  // Schema browser UX enhancements
+  // -------------------------------------------------------------------------
+  describe('UX enhancements', () => {
+    it('shows table count badge in heading', () => {
+      render(<SchemaBrowser schema={mockSchema} />)
+      expect(screen.getByText('2')).toBeInTheDocument()
+    })
+
+    it('shows column count next to each table name', () => {
+      render(<SchemaBrowser schema={mockSchema} />)
+      // users has 3 columns, orders has 3 columns
+      expect(screen.getAllByText('3')).toHaveLength(2)
+    })
+
+    it('shows a chevron icon for expandable tables', () => {
+      render(<SchemaBrowser schema={mockSchema} />)
+      const svgs = document.querySelectorAll('svg[aria-hidden="true"]')
+      expect(svgs.length).toBeGreaterThanOrEqual(2)
+    })
+
+    it('shows PK badge for primary key columns', () => {
+      render(<SchemaBrowser schema={mockSchema} />)
+      fireEvent.click(screen.getByText('users'))
+      expect(screen.getByText('PK')).toBeInTheDocument()
+    })
+
+    it('column panel has rounded border card styling', () => {
+      render(<SchemaBrowser schema={mockSchema} />)
+      fireEvent.click(screen.getByText('users'))
+      const panel = screen.getByText('email').closest('div[class*="rounded-lg"]')!
+      expect(panel.className).toContain('rounded-lg')
+      expect(panel.className).toContain('border')
+      expect(panel.className).toContain('bg-zinc-50')
     })
   })
 })
