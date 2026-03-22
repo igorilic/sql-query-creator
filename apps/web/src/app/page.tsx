@@ -28,24 +28,26 @@ export default function HomePage() {
   }
 
   return (
-    <SidebarLayout
-      navbar={<AppHeader status={status} onConnectClick={() => setDialogOpen(true)} />}
-      sidebar={<SchemaBrowser schema={schema} />}
-    >
-      <div className="flex flex-col flex-1 min-h-0">
-        <div className="flex-1 min-h-0">
-          <ChatPanel messages={messages} loading={loading} schemaContext={schemaContext} onSend={sendMessage} />
+    <>
+      <SidebarLayout
+        navbar={<AppHeader status={status} onConnectClick={() => setDialogOpen(true)} />}
+        sidebar={<SchemaBrowser schema={schema} />}
+      >
+        <div className="flex flex-col flex-1 min-h-0">
+          <div className="flex-1 min-h-0">
+            <ChatPanel messages={messages} loading={loading} schemaContext={schemaContext} onSend={sendMessage} />
+          </div>
+          <div className="h-64 shrink-0 border-t border-zinc-200 dark:border-zinc-700">
+            <QueryEditor value={displaySql} onChange={setEditorSql} />
+          </div>
         </div>
-        <div className="h-64 shrink-0 border-t border-zinc-200 dark:border-zinc-700">
-          <QueryEditor value={displaySql} onChange={setEditorSql} />
-        </div>
-      </div>
+      </SidebarLayout>
 
       <ConnectionDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onConnect={handleConnect}
       />
-    </SidebarLayout>
+    </>
   )
 }
