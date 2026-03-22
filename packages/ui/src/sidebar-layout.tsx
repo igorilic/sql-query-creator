@@ -54,7 +54,10 @@ export function SidebarLayout({
   return (
     <div className="relative isolate flex min-h-svh w-full bg-white max-lg:flex-col lg:bg-zinc-100 dark:bg-zinc-900 dark:lg:bg-zinc-950">
       {/* Sidebar on desktop */}
-      <div className="fixed inset-y-0 left-0 w-64 max-lg:hidden overflow-y-auto">{sidebar}</div>
+      <div className="fixed inset-y-0 left-0 w-64 max-lg:hidden flex flex-col">
+        <div className="shrink-0 border-b border-zinc-200 dark:border-zinc-700 px-4 py-3">{navbar}</div>
+        <div className="flex-1 overflow-y-auto">{sidebar}</div>
+      </div>
 
       {/* Sidebar on mobile */}
       <MobileSidebar open={showSidebar} close={() => setShowSidebar(false)}>
