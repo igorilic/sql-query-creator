@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react'
 import Markdown from 'react-markdown'
-import { Input } from '@ui/input'
 import { Button } from '@ui/button'
 import { Badge } from '@ui/badge'
 import type { ChatMessage } from '@repo/shared/types'
@@ -79,21 +78,35 @@ export function ChatPanel({ messages, loading, schemaContext, onSend }: ChatPane
         {loading && <div role="status" aria-label="Loading…">…</div>}
       </div>
 
-      {/* Input form */}
-      <form onSubmit={handleSubmit} className="flex items-end gap-3 p-6 border-t border-zinc-200 dark:border-zinc-700">
-        <div className="flex-1">
-          <Input
-            type="text"
+      {/* Input form — styled as a chat row */}
+      <div className="p-6 pt-2">
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-lg bg-zinc-100 dark:bg-zinc-800 ring-1 ring-zinc-200 dark:ring-zinc-700 focus-within:ring-2 focus-within:ring-zinc-400 dark:focus-within:ring-zinc-500 transition-shadow"
+        >
+          <textarea
             aria-label="Chat message"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask a question…"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                if (canSubmit) {
+                  handleSubmit(e)
+                }
+              }
+            }}
+            placeholder="Ask a question… (Enter to send, Shift+Enter for new line)"
+            rows={3}
+            className="w-full resize-none bg-transparent px-4 pt-4 pb-2 text-sm text-zinc-950 dark:text-white placeholder:text-zinc-400 focus:outline-none"
           />
-        </div>
-        <Button type="submit" disabled={!canSubmit} color="dark/zinc" className="px-6 py-2.5">
-          Send
-        </Button>
-      </form>
+          <div className="flex items-center justify-end px-3 pb-3">
+            <Button type="submit" disabled={!canSubmit} color="dark/zinc" className="px-5 py-2">
+              Send
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }

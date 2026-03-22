@@ -10,12 +10,6 @@ vi.mock('react-markdown', () => ({
   default: ({ children }: { children: string }) => <div data-testid="markdown">{children}</div>,
 }))
 
-vi.mock('@ui/input', () => ({
-  Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => (
-    <input {...props} />
-  ),
-}))
-
 vi.mock('@ui/button', () => ({
   Button: ({
     children,
@@ -271,10 +265,10 @@ describe('ChatPanel', () => {
   // Dark mode classes
   // -------------------------------------------------------------------------
   describe('dark mode classes', () => {
-    it('form container has dark:border-zinc-700', () => {
+    it('form container has dark:ring-zinc-700', () => {
       renderPanel()
       const form = screen.getByRole('textbox', { name: /chat message/i }).closest('form')!
-      expect(form.className).toContain('dark:border-zinc-700')
+      expect(form.className).toContain('dark:ring-zinc-700')
     })
 
     it('message area has dark:text-zinc-300', () => {
