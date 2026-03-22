@@ -6,6 +6,10 @@ import React from 'react'
 // Mocks — Catalyst components use browser APIs unavailable in jsdom.
 // ---------------------------------------------------------------------------
 
+vi.mock('react-markdown', () => ({
+  default: ({ children }: { children: string }) => <div data-testid="markdown">{children}</div>,
+}))
+
 vi.mock('@ui/input', () => ({
   Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => (
     <input {...props} />
@@ -268,8 +272,57 @@ describe('ChatPanel', () => {
 
     it('message area has dark:text-zinc-300', () => {
       renderPanel({ messages: [userMessage] })
-      const msgArea = screen.getByText('Show me all users').closest('div[class*="overflow"]')!
+      const article = screen.getByText('Show me all users').closest('article')!
+      const msgArea = article.parentElement!
       expect(msgArea.className).toContain('dark:text-zinc-300')
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  // Message spacing and visual styling
+  // -------------------------------------------------------------------------
+  describe('message spacing and styling', () => {
+    it('message list has space-y-4 and p-6 for adequate spacing', () => {
+      renderPanel({ messages: [userMessage] })
+      const article = screen.getByText('Show me all users').closest('article')!
+      const msgList = article.parentElement!
+      expect(msgList.className).toContain('space-y-4')
+      expect(msgList.className).toContain('p-6')
+    })
+
+    it('user message has rounded background styling', () => {
+      renderPanel({ messages: [userMessage] })
+      const article = screen.getByText('Show me all users').closest('article')!
+      expect(article.className).toContain('rounded-lg')
+      expect(article.className).toContain('bg-zinc-100')
+      expect(article.className).toContain('dark:bg-zinc-800')
+      expect(article.className).toContain('p-4')
+    })
+
+    it('assistant message has distinct styling from user message', () => {
+      renderPanel({ messages: [assistantMessageNoSql] })
+      const article = screen.getByText('I need more context to answer that.').closest('article')!
+      expect(article.className).toContain('rounded-lg')
+      expect(article.className).toContain('bg-white')
+      expect(article.className).toContain('dark:bg-zinc-800/50')
+      expect(article.className).toContain('p-4')
+    })
+
+    it('SQL code block has background, padding, and overflow-x-auto', () => {
+      renderPanel({ messages: [assistantMessage] })
+      const pre = screen.getByTestId('sql-block').closest('pre')!
+      expect(pre.className).toContain('rounded-lg')
+      expect(pre.className).toContain('bg-zinc-50')
+      expect(pre.className).toContain('dark:bg-zinc-900')
+      expect(pre.className).toContain('p-4')
+      expect(pre.className).toContain('overflow-x-auto')
+      expect(pre.className).toContain('mt-3')
+    })
+
+    it('SQL code element has font-mono class', () => {
+      renderPanel({ messages: [assistantMessage] })
+      const code = screen.getByTestId('sql-block')
+      expect(code.className).toContain('font-mono')
     })
   })
 })

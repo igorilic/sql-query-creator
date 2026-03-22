@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import Markdown from 'react-markdown'
 import { Input } from '@ui/input'
 import { Button } from '@ui/button'
 import type { ChatMessage } from '@repo/shared/types'
@@ -34,13 +35,23 @@ export function ChatPanel({ messages, loading, onSend }: ChatPanelProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Message list */}
-      <div className="flex-1 overflow-y-auto space-y-2 p-4 dark:text-zinc-300">
+      <div className="flex-1 overflow-y-auto space-y-4 p-6 dark:text-zinc-300">
         {messages.map((msg) => (
-          <article key={msg.id} data-role={msg.role}>
-            <p>{msg.content}</p>
+          <article
+            key={msg.id}
+            data-role={msg.role}
+            className={
+              msg.role === 'user'
+                ? 'rounded-lg bg-zinc-100 dark:bg-zinc-800 p-4'
+                : 'rounded-lg bg-white dark:bg-zinc-800/50 p-4 ring-1 ring-zinc-200 dark:ring-zinc-700'
+            }
+          >
+            <div className="prose prose-sm dark:prose-invert max-w-none prose-pre:bg-zinc-50 prose-pre:dark:bg-zinc-900 prose-pre:rounded-lg prose-pre:p-4 prose-pre:overflow-x-auto prose-code:font-mono">
+              <Markdown>{msg.content}</Markdown>
+            </div>
             {msg.sql && (
-              <pre>
-                <code data-testid="sql-block">{msg.sql}</code>
+              <pre className="mt-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 p-4 overflow-x-auto text-sm">
+                <code data-testid="sql-block" className="font-mono">{msg.sql}</code>
               </pre>
             )}
           </article>
