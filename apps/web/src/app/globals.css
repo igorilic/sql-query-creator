@@ -4,3 +4,9 @@
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
+
+/* Ensure Headless UI portal root renders above the h-screen layout */
+#headlessui-portal-root {
+  position: relative;
+  z-index: 50;
+}
