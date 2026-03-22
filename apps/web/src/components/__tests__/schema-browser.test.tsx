@@ -271,4 +271,37 @@ describe('SchemaBrowser', () => {
     expect(screen.getByText('email')).toBeInTheDocument()
     expect(screen.getByText('user_id')).toBeInTheDocument()
   })
+
+  // -------------------------------------------------------------------------
+  // Dark mode classes
+  // -------------------------------------------------------------------------
+  describe('dark mode classes', () => {
+    it('empty-state container has dark:text-zinc-400', () => {
+      render(<SchemaBrowser schema={null} />)
+      const el = screen.getByText(/connect a database/i)
+      expect(el.closest('div')!.className).toContain('dark:text-zinc-400')
+    })
+
+    it('column row has dark:text-zinc-400', () => {
+      render(<SchemaBrowser schema={mockSchema} />)
+      fireEvent.click(screen.getByText('users'))
+      const colRow = screen.getByText('email').closest('div')!
+      expect(colRow.className).toContain('dark:text-zinc-400')
+    })
+
+    it('data-type span has dark:text-zinc-500', () => {
+      render(<SchemaBrowser schema={mockSchema} />)
+      fireEvent.click(screen.getByText('users'))
+      const dataType = screen.getByText('integer')
+      expect(dataType.className).toContain('dark:text-zinc-500')
+    })
+
+    it('FK badge has dark:bg-amber-900/50 and dark:text-amber-400', () => {
+      render(<SchemaBrowser schema={mockSchema} />)
+      fireEvent.click(screen.getByText('orders'))
+      const fkBadge = screen.getByText('FK')
+      expect(fkBadge.className).toContain('dark:bg-amber-900/50')
+      expect(fkBadge.className).toContain('dark:text-amber-400')
+    })
+  })
 })

@@ -1,6 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import React from 'react'
+
+// ---------------------------------------------------------------------------
+// Mocks — Catalyst components use browser APIs unavailable in jsdom.
+// ---------------------------------------------------------------------------
+
+vi.mock('@ui/input', () => ({
+  Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => (
+    <input {...props} />
+  ),
+}))
+
+vi.mock('@ui/button', () => ({
+  Button: ({
+    children,
+    ...rest
+  }: React.ButtonHTMLAttributes<HTMLButtonElement> & { children: React.ReactNode }) => (
+    <button {...rest}>{children}</button>
+  ),
+}))
+
 import { ChatPanel } from '../chat-panel'
 import type { ChatMessage } from '@repo/shared/types'
 
@@ -234,5 +254,22 @@ describe('ChatPanel', () => {
     renderPanel({ loading: false })
 
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  // -------------------------------------------------------------------------
+  // Dark mode classes
+  // -------------------------------------------------------------------------
+  describe('dark mode classes', () => {
+    it('form container has dark:border-zinc-700', () => {
+      renderPanel()
+      const form = screen.getByRole('textbox', { name: /chat message/i }).closest('form')!
+      expect(form.className).toContain('dark:border-zinc-700')
+    })
+
+    it('message area has dark:text-zinc-300', () => {
+      renderPanel({ messages: [userMessage] })
+      const msgArea = screen.getByText('Show me all users').closest('div[class*="overflow"]')!
+      expect(msgArea.className).toContain('dark:text-zinc-300')
+    })
   })
 })

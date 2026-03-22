@@ -23,7 +23,7 @@ export function SchemaBrowser({ schema }: SchemaBrowserProps) {
 
   if (schema === null) {
     return (
-      <div className="px-4 py-6 text-sm text-zinc-500">
+      <div className="px-4 py-6 text-sm text-zinc-500 dark:text-zinc-400">
         Connect a database to browse schema
       </div>
     )
@@ -31,7 +31,7 @@ export function SchemaBrowser({ schema }: SchemaBrowserProps) {
 
   if (schema.tables.length === 0) {
     return (
-      <div className="px-4 py-6 text-sm text-zinc-500">
+      <div className="px-4 py-6 text-sm text-zinc-500 dark:text-zinc-400">
         No tables found
       </div>
     )
@@ -64,19 +64,19 @@ export function SchemaBrowser({ schema }: SchemaBrowserProps) {
                   {table.columns.map((col) => (
                     <div
                       key={col.name}
-                      className="flex items-center gap-2 text-xs text-zinc-600 py-0.5"
+                      className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400 py-0.5"
                     >
                       <span className="font-medium">{col.name}</span>
-                      <span className="text-zinc-400">{col.dataType}</span>
+                      <span className="text-zinc-400 dark:text-zinc-500">{col.dataType}</span>
                       {col.foreignKey && (
                         <>
                           <span
-                            className="rounded bg-amber-100 px-1 py-0.5 text-xs font-semibold text-amber-700"
+                            className="rounded bg-amber-100 dark:bg-amber-900/50 px-1 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-400"
                             title={`FK → ${col.foreignKey.table}.${col.foreignKey.column}`}
                           >
                             FK
                           </span>
-                          <span className="text-zinc-400">
+                          <span className="text-zinc-400 dark:text-zinc-500">
                             → {col.foreignKey.table}.{col.foreignKey.column}
                           </span>
                         </>

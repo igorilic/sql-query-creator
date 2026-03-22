@@ -179,6 +179,8 @@ vi.mock('@ui/input', () => ({
     type,
     name,
     required,
+    'aria-label': ariaLabel,
+    className,
   }: {
     value?: string
     onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void
@@ -186,6 +188,8 @@ vi.mock('@ui/input', () => ({
     type?: string
     name?: string
     required?: boolean
+    'aria-label'?: string
+    className?: string
   }) => (
     <input
       value={value}
@@ -194,6 +198,8 @@ vi.mock('@ui/input', () => ({
       type={type ?? 'text'}
       name={name}
       required={required}
+      aria-label={ariaLabel}
+      className={className}
     />
   ),
 }))

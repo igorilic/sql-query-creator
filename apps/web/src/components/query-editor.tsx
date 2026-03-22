@@ -41,10 +41,10 @@ export function QueryEditor({
       <div
         role="toolbar"
         aria-label="Editor actions"
-        className="flex items-center justify-end gap-2 p-2 border-b"
+        className="flex items-center justify-end gap-2 p-2 border-b border-zinc-200 dark:border-zinc-700"
       >
         {copyError && (
-          <span role="alert" className="text-sm text-red-600">
+          <span role="alert" className="text-sm text-red-600 dark:text-red-400">
             {copyError}
           </span>
         )}
