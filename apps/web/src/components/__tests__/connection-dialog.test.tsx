@@ -8,20 +8,6 @@ import { ConnectionDialog } from '../connection-dialog'
 // internal transition state that escapes React's synchronous act() boundary.
 // ---------------------------------------------------------------------------
 
-vi.mock('@ui/dialog', () => ({
-  Dialog: ({
-    children,
-    open,
-  }: {
-    children: React.ReactNode
-    open: boolean
-    onClose: () => void
-  }) => (open ? <div role="dialog">{children}</div> : null),
-  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
-  DialogBody: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogActions: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}))
-
 vi.mock('@ui/button', () => ({
   Button: ({
     children,
@@ -47,64 +33,6 @@ vi.mock('@ui/button', () => ({
   ),
 }))
 
-vi.mock('@ui/fieldset', () => ({
-  Fieldset: ({ children }: { children: React.ReactNode }) => <fieldset>{children}</fieldset>,
-  FieldGroup: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  Field: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  Label: ({ children, htmlFor }: { children: React.ReactNode; htmlFor?: string }) => (
-    <label htmlFor={htmlFor}>{children}</label>
-  ),
-}))
-
-vi.mock('@ui/select', () => ({
-  Select: ({
-    children,
-    value,
-    onChange,
-    id,
-    name,
-  }: {
-    children: React.ReactNode
-    value?: string
-    onChange?: (e: React.ChangeEvent<HTMLSelectElement>) => void
-    id?: string
-    name?: string
-  }) => (
-    <select id={id} name={name} value={value} onChange={onChange}>
-      {children}
-    </select>
-  ),
-}))
-
-vi.mock('@ui/input', () => ({
-  Input: ({
-    value,
-    onChange,
-    placeholder,
-    type,
-    id,
-    name,
-    required,
-  }: {
-    value?: string
-    onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void
-    placeholder?: string
-    type?: string
-    id?: string
-    name?: string
-    required?: boolean
-  }) => (
-    <input
-      id={id}
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      type={type ?? 'text'}
-      name={name}
-      required={required}
-    />
-  ),
-}))
 
 // ---------------------------------------------------------------------------
 // Helpers

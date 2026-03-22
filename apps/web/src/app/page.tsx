@@ -15,7 +15,6 @@ export default function HomePage() {
   const { status, schema, connect } = useConnection()
   const { messages, loading, currentSql, schemaContext, sendMessage } = useChat()
   const [dialogOpen, setDialogOpen] = useState(false)
-  console.log('[HomePage] render, dialogOpen:', dialogOpen)
   const [editorSql, setEditorSql] = useState<string>('')
 
   // Keep editor in sync with AI-generated SQL, but allow user edits
@@ -31,10 +30,7 @@ export default function HomePage() {
   return (
     <>
       <SidebarLayout
-        navbar={<AppHeader status={status} onConnectClick={() => {
-          console.log('[HomePage] onConnectClick fired, setting dialogOpen to true')
-          setDialogOpen(true)
-        }} />}
+        navbar={<AppHeader status={status} onConnectClick={() => setDialogOpen(true)} />}
         sidebar={<SchemaBrowser schema={schema} />}
       >
         <div className="flex flex-col flex-1 min-h-0">
