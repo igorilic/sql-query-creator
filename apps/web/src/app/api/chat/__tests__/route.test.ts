@@ -276,4 +276,45 @@ describe('POST /api/chat', () => {
 
     expect(sendChatCompletion).toHaveBeenCalledWith(mockMessages)
   })
+
+  // -------------------------------------------------------------------------
+  // Schema meta SSE event
+  // -------------------------------------------------------------------------
+
+  it('sends a meta event with schemaAvailable:true and tableCount when connected with schema', async () => {
+    vi.mocked(connectionManager.getStatus).mockReturnValue({ connected: true, type: 'postgresql' })
+    vi.mocked(connectionManager.getSchema).mockResolvedValueOnce(postgresSchema)
+    vi.mocked(sendChatCompletion).mockReturnValue(tokensGen([]))
+
+    const response = await POST(makeRequest({ message: 'Hello' }))
+    const text = await readSSE(response)
+
+    expect(text).toContain('event: meta')
+    expect(text).toContain('"schemaAvailable":true')
+    expect(text).toContain('"tableCount":1')
+  })
+
+  it('sends a meta event with schemaAvailable:false when not connected', async () => {
+    vi.mocked(connectionManager.getStatus).mockReturnValue({ connected: false })
+    vi.mocked(sendChatCompletion).mockReturnValue(tokensGen([]))
+
+    const response = await POST(makeRequest({ message: 'Hello' }))
+    const text = await readSSE(response)
+
+    expect(text).toContain('event: meta')
+    expect(text).toContain('"schemaAvailable":false')
+    expect(text).toContain('"tableCount":0')
+  })
+
+  it('sends a meta event with schemaError when getSchema() fails', async () => {
+    vi.mocked(connectionManager.getStatus).mockReturnValue({ connected: true, type: 'sqlite' })
+    vi.mocked(connectionManager.getSchema).mockRejectedValueOnce(new Error('introspection failed'))
+    vi.mocked(sendChatCompletion).mockReturnValue(tokensGen([]))
+
+    const response = await POST(makeRequest({ message: 'Hello' }))
+    const text = await readSSE(response)
+
+    expect(text).toContain('"schemaError":"introspection failed"')
+    expect(text).toContain('"schemaAvailable":false')
+  })
 })

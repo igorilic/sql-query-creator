@@ -22,6 +22,10 @@ function sseError(message: string): string {
   return `event: error\ndata: ${JSON.stringify({ error: message })}\n\n`
 }
 
+function sseMeta(meta: Record<string, unknown>): string {
+  return `event: meta\ndata: ${JSON.stringify(meta)}\n\n`
+}
+
 const SSE_DONE = 'data: [DONE]\n\n'
 
 export async function POST(request: Request): Promise<Response> {
@@ -45,10 +49,13 @@ export async function POST(request: Request): Promise<Response> {
     status.connected && status.type ? status.type : 'postgresql'
 
   let schema: DatabaseSchema | null = null
+  let schemaError: string | null = null
   if (status.connected) {
     try {
       schema = await connectionManager.getSchema()
-    } catch {
+    } catch (err) {
+      schemaError = err instanceof Error ? err.message : 'Schema retrieval failed'
+      console.warn('[chat] Failed to load schema:', schemaError)
       schema = null
     }
   }
@@ -59,8 +66,15 @@ export async function POST(request: Request): Promise<Response> {
   // 4. Stream the response as SSE
   const encoder = new TextEncoder()
 
+  const schemaMeta = {
+    schemaAvailable: schema !== null,
+    tableCount: schema?.tables.length ?? 0,
+    ...(schemaError ? { schemaError } : {}),
+  }
+
   const stream = new ReadableStream({
     async start(controller) {
+      controller.enqueue(encoder.encode(sseMeta(schemaMeta)))
       try {
         for await (const token of sendChatCompletion(messages)) {
           controller.enqueue(encoder.encode(sseToken(token)))

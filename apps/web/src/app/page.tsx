@@ -13,7 +13,7 @@ import type { ConnectionConfig } from '@repo/shared/types'
 
 export default function HomePage() {
   const { status, schema, connect } = useConnection()
-  const { messages, loading, currentSql, sendMessage } = useChat()
+  const { messages, loading, currentSql, schemaContext, sendMessage } = useChat()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editorSql, setEditorSql] = useState<string>('')
 
@@ -33,7 +33,7 @@ export default function HomePage() {
         navbar={<AppHeader status={status} onConnectClick={() => setDialogOpen(true)} />}
         sidebar={<SchemaBrowser schema={schema} />}
       >
-        <ChatPanel messages={messages} loading={loading} onSend={sendMessage} />
+        <ChatPanel messages={messages} loading={loading} schemaContext={schemaContext} onSend={sendMessage} />
         <QueryEditor value={displaySql} onChange={setEditorSql} />
       </SidebarLayout>
 

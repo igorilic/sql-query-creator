@@ -4,7 +4,9 @@ import React, { useState } from 'react'
 import Markdown from 'react-markdown'
 import { Input } from '@ui/input'
 import { Button } from '@ui/button'
+import { Badge } from '@ui/badge'
 import type { ChatMessage } from '@repo/shared/types'
+import type { SchemaMeta } from '../contexts/chat-context'
 
 // ---------------------------------------------------------------------------
 // Props
@@ -13,6 +15,7 @@ import type { ChatMessage } from '@repo/shared/types'
 interface ChatPanelProps {
   messages: ChatMessage[]
   loading: boolean
+  schemaContext?: SchemaMeta | null
   onSend: (text: string) => void
 }
 
@@ -20,7 +23,7 @@ interface ChatPanelProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export function ChatPanel({ messages, loading, onSend }: ChatPanelProps) {
+export function ChatPanel({ messages, loading, schemaContext, onSend }: ChatPanelProps) {
   const [input, setInput] = useState('')
 
   const canSubmit = input.trim().length > 0 && !loading
@@ -34,6 +37,21 @@ export function ChatPanel({ messages, loading, onSend }: ChatPanelProps) {
 
   return (
     <div className="flex flex-col h-full">
+      {/* Schema context indicator */}
+      {schemaContext && (
+        <div className="flex items-center gap-2 px-6 pt-4 text-xs" data-testid="schema-indicator">
+          {schemaContext.schemaAvailable ? (
+            <Badge color="green">
+              Schema loaded: {schemaContext.tableCount} {schemaContext.tableCount === 1 ? 'table' : 'tables'}
+            </Badge>
+          ) : (
+            <Badge color="amber">
+              {schemaContext.schemaError ?? 'No schema available — connect to a database for better results'}
+            </Badge>
+          )}
+        </div>
+      )}
+
       {/* Message list */}
       <div className="flex-1 overflow-y-auto space-y-4 p-6 dark:text-zinc-300">
         {messages.map((msg) => (
