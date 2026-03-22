@@ -74,7 +74,7 @@ export function SidebarLayout({
       {/* Below navbar: sidebar + content side by side */}
       <div className="flex flex-1 min-h-0">
         {/* Sidebar on desktop */}
-        <aside className="hidden lg:flex lg:w-64 lg:shrink-0 lg:flex-col border-r border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 overflow-y-auto">
+        <aside className="max-lg:hidden w-64 shrink-0 flex flex-col border-r border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 overflow-y-auto">
           {sidebar}
         </aside>
 
