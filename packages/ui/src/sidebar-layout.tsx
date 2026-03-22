@@ -61,17 +61,17 @@ export function SidebarLayout({
 
       {/* Sidebar on mobile */}
       <MobileSidebar open={showSidebar} close={() => setShowSidebar(false)}>
+        <div className="shrink-0 border-b border-zinc-200 dark:border-zinc-700 px-4 py-3">{navbar}</div>
         {sidebar}
       </MobileSidebar>
 
-      {/* Navbar on mobile */}
+      {/* Hamburger menu on mobile */}
       <header className="flex items-center px-4 lg:hidden">
         <div className="py-2.5">
           <NavbarItem onClick={() => setShowSidebar(true)} aria-label="Open navigation">
             <OpenMenuIcon />
           </NavbarItem>
         </div>
-        <div className="min-w-0 flex-1">{navbar}</div>
       </header>
 
       {/* Content */}
