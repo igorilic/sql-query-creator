@@ -52,7 +52,7 @@ export function AppHeader({ status, onConnectClick }: AppHeaderProps) {
           <Badge color={statusColor(status)}>{statusLabel(status)}</Badge>
         </NavbarItem>
         <div className="flex items-center">
-          <Button onClick={onConnectClick}>Connect</Button>
+          <Button onClick={onConnectClick} color="dark/zinc" className="px-5 py-2">Connect</Button>
         </div>
       </NavbarSection>
     </Navbar>
